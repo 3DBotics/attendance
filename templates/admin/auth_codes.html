@@ -1,0 +1,211 @@
+{% extends 'admin/base_admin.html' %}
+
+{% block title %}Authorization Codes - 3DBotics Admin{% endblock %}
+
+{% block admin_content %}
+<div class="flex justify-between items-center mb-8">
+    <h1 class="text-3xl font-bold text-teal-800">Authorization Codes</h1>
+    <button onclick="document.getElementById('addCodeModal').classList.remove('hidden')" class="bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700">
+        <i class="fas fa-plus mr-2"></i>Generate New Code
+    </button>
+</div>
+
+<div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+    <h2 class="text-xl font-bold text-gray-800 mb-4">About Authorization Codes</h2>
+    <div class="grid md:grid-cols-2 gap-4 text-sm text-gray-600">
+        <div class="bg-teal-50 p-4 rounded-lg">
+            <h3 class="font-bold text-teal-800 mb-2"><i class="fas fa-sun mr-2"></i>Early Start Codes</h3>
+            <p>Used when an employee needs to clock in before their scheduled start time. The early arrival time will be counted and paid.</p>
+        </div>
+        <div class="bg-orange-50 p-4 rounded-lg">
+            <h3 class="font-bold text-orange-800 mb-2"><i class="fas fa-moon mr-2"></i>Overtime Codes</h3>
+            <p>Used when an employee needs to work beyond their scheduled end time. Overtime is paid at 1.25x (DOLE standard rate).</p>
+        </div>
+    </div>
+</div>
+
+<div class="bg-white rounded-xl shadow overflow-hidden">
+    <table class="w-full">
+        <thead class="bg-gray-50">
+            <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Code</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Uses Left</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Valid Until</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Created By</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200">
+            {% for code in codes %}
+            <tr>
+                <td class="px-6 py-4 text-sm font-mono font-bold text-gray-900">{{ code.code }}</td>
+                <td class="px-6 py-4 text-sm">
+                    <span class="px-2 py-1 text-xs rounded-full {% if code.code_type == 'early_start' %}bg-teal-100 text-teal-700{% else %}bg-orange-100 text-orange-700{% endif %}">
+                        {% if code.code_type == 'early_start' %}Early Start{% else %}Overtime{% endif %}
+                    </span>
+                </td>
+                <td class="px-6 py-4 text-sm text-gray-600">{{ code.description or '-' }}</td>
+                <td class="px-6 py-4 text-sm text-gray-900">
+                    {% if code.uses_remaining == -1 %}Unlimited{% else %}{{ code.uses_remaining }}{% endif %}
+                </td>
+                <td class="px-6 py-4 text-sm text-gray-600">{{ code.valid_until or 'No expiry' }}</td>
+                <td class="px-6 py-4">
+                    <span class="px-2 py-1 text-xs rounded-full {% if code.is_active %}bg-green-100 text-green-700{% else %}bg-red-100 text-red-700{% endif %}">
+                        {% if code.is_active %}Active{% else %}Inactive{% endif %}
+                    </span>
+                </td>
+                <td class="px-6 py-4 text-sm text-gray-600">{{ code.created_by_name or 'System' }}</td>
+                <td class="px-6 py-4 text-sm space-x-2">
+                    <button onclick="editCode({{ code.id }}, '{{ code.code }}', '{{ code.code_type }}', '{{ code.description or '' }}', {{ code.uses_remaining }}, '{{ code.valid_until or '' }}', {{ code.is_active }})" class="text-teal-600 hover:text-teal-800">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button onclick="confirmDelete({{ code.id }})" class="text-red-600 hover:text-red-800">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="8" class="px-6 py-8 text-center text-gray-500">No authorization codes found. Create one to get started.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div id="addCodeModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-xl p-6 w-full max-w-md">
+        <h2 class="text-xl font-bold text-teal-800 mb-4">Generate Authorization Code</h2>
+        <form action="/admin/auth-codes/add" method="POST">
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Code Type</label>
+                    <select name="code_type" required class="mt-1 w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500">
+                        <option value="early_start">Early Start (Before Shift)</option>
+                        <option value="overtime">Overtime (After Shift)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Code (Leave blank to auto-generate)</label>
+                    <div class="flex gap-2">
+                        <input type="text" name="code" id="new_code" class="mt-1 flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 font-mono" placeholder="Auto-generated">
+                        <button type="button" onclick="generateCode()" class="mt-1 px-3 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">
+                            <i class="fas fa-sync"></i>
+                        </button>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Description (Reason for this code)</label>
+                    <textarea name="description" rows="2" class="mt-1 w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500" placeholder="e.g., Special project deadline"></textarea>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Uses Allowed</label>
+                        <input type="number" name="uses_remaining" value="-1" class="mt-1 w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500" placeholder="-1 = Unlimited">
+                        <p class="text-xs text-gray-500 mt-1">-1 for unlimited</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Valid Until</label>
+                        <input type="date" name="valid_until" class="mt-1 w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500">
+                        <p class="text-xs text-gray-500 mt-1">Leave blank for no expiry</p>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end space-x-3">
+                <button type="button" onclick="document.getElementById('addCodeModal').classList.add('hidden')" class="px-4 py-2 border rounded-lg hover:bg-gray-50">Cancel</button>
+                <button type="submit" class="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700">Generate Code</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="editCodeModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-xl p-6 w-full max-w-md">
+        <h2 class="text-xl font-bold text-teal-800 mb-4">Edit Authorization Code</h2>
+        <form id="editCodeForm" method="POST">
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Code</label>
+                    <input type="text" name="code" id="edit_code" required class="mt-1 w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 font-mono">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Type</label>
+                    <input type="text" id="edit_code_type" disabled class="mt-1 w-full px-3 py-2 border rounded-lg bg-gray-100">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Description</label>
+                    <textarea name="description" id="edit_description" rows="2" class="mt-1 w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500"></textarea>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Uses Remaining</label>
+                        <input type="number" name="uses_remaining" id="edit_uses" class="mt-1 w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Valid Until</label>
+                        <input type="date" name="valid_until" id="edit_valid_until" class="mt-1 w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500">
+                    </div>
+                </div>
+                <div>
+                    <label class="flex items-center">
+                        <input type="checkbox" name="is_active" id="edit_is_active" value="1" class="mr-2">
+                        <span class="text-sm font-medium text-gray-700">Active</span>
+                    </label>
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end space-x-3">
+                <button type="button" onclick="document.getElementById('editCodeModal').classList.add('hidden')" class="px-4 py-2 border rounded-lg hover:bg-gray-50">Cancel</button>
+                <button type="submit" class="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="deleteModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-xl p-6 w-full max-w-md">
+        <h2 class="text-xl font-bold text-red-600 mb-4">Delete Authorization Code</h2>
+        <p class="text-gray-600 mb-4">Are you sure you want to delete this authorization code?</p>
+        <form id="deleteForm" method="POST">
+            <div class="flex justify-end space-x-3">
+                <button type="button" onclick="document.getElementById('deleteModal').classList.add('hidden')" class="px-4 py-2 border rounded-lg hover:bg-gray-50">Cancel</button>
+                <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">Delete</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% block scripts %}
+<script>
+async function generateCode() {
+    try {
+        const response = await fetch('/admin/auth-codes/generate', { method: 'POST' });
+        const data = await response.json();
+        if (data.success) {
+            document.getElementById('new_code').value = data.code;
+        }
+    } catch (error) {
+        console.error('Error generating code:', error);
+    }
+}
+
+function editCode(id, code, codeType, description, usesRemaining, validUntil, isActive) {
+    document.getElementById('editCodeForm').action = '/admin/auth-codes/' + id + '/edit';
+    document.getElementById('edit_code').value = code;
+    document.getElementById('edit_code_type').value = codeType === 'early_start' ? 'Early Start' : 'Overtime';
+    document.getElementById('edit_description').value = description;
+    document.getElementById('edit_uses').value = usesRemaining;
+    document.getElementById('edit_valid_until').value = validUntil;
+    document.getElementById('edit_is_active').checked = isActive == 1;
+    document.getElementById('editCodeModal').classList.remove('hidden');
+}
+
+function confirmDelete(id) {
+    document.getElementById('deleteForm').action = '/admin/auth-codes/' + id + '/delete';
+    document.getElementById('deleteModal').classList.remove('hidden');
+}
+</script>
+{% endblock %}
+{% endblock %}

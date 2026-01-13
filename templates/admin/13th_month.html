@@ -1,0 +1,60 @@
+{% extends 'admin/base_admin.html' %}
+
+{% block title %}13th Month Pay - 3DBotics Admin{% endblock %}
+
+{% block admin_content %}
+<div class="flex justify-between items-center mb-8">
+    <h1 class="text-3xl font-bold text-teal-800">13th Month Pay Report</h1>
+    <form method="GET" class="flex items-center space-x-2">
+        <select name="year" onchange="this.form.submit()" class="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500">
+            {% for y in years %}
+            <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
+            {% endfor %}
+        </select>
+    </form>
+</div>
+
+<div class="bg-white rounded-xl shadow overflow-hidden">
+    <table class="w-full">
+        <thead class="bg-gray-50">
+            <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Employee ID</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total Basic Salary ({{ year }})</th>
+                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">13th Month Pay</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200">
+            {% for emp in results %}
+            <tr>
+                <td class="px-6 py-4 text-sm text-gray-900">{{ emp.employee_id }}</td>
+                <td class="px-6 py-4 text-sm font-medium text-gray-900">{{ emp.name }}</td>
+                <td class="px-6 py-4 text-sm text-right text-gray-900">₱{{ "%.2f"|format(emp.total_basic) }}</td>
+                <td class="px-6 py-4 text-sm text-right font-bold text-teal-700">₱{{ "%.2f"|format(emp.thirteenth_month) }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="4" class="px-6 py-8 text-center text-gray-500">No payroll data for {{ year }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        {% if results %}
+        <tfoot class="bg-gray-100">
+            <tr class="font-bold">
+                <td class="px-6 py-4" colspan="2">TOTAL</td>
+                <td class="px-6 py-4 text-right">₱{{ "%.2f"|format(results|sum(attribute='total_basic')) }}</td>
+                <td class="px-6 py-4 text-right text-teal-700">₱{{ "%.2f"|format(results|sum(attribute='thirteenth_month')) }}</td>
+            </tr>
+        </tfoot>
+        {% endif %}
+    </table>
+</div>
+
+<div class="mt-6 bg-teal-50 border border-teal-200 rounded-lg p-4">
+    <h3 class="font-bold text-teal-800 mb-2">13th Month Pay Calculation</h3>
+    <p class="text-teal-700 text-sm">
+        Formula: <strong>Total Basic Salary Earned in Year / 12</strong><br>
+        This report shows the 13th month pay based on all processed payroll periods for the selected year.
+    </p>
+</div>
+{% endblock %}

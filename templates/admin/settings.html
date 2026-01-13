@@ -1,0 +1,308 @@
+{% extends 'admin/base_admin.html' %}
+
+{% block title %}Settings - 3DBotics Admin{% endblock %}
+
+{% block admin_content %}
+<h1 class="text-3xl font-bold text-teal-800 mb-8">Settings</h1>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="bg-white rounded-xl shadow p-6">
+        <h2 class="text-xl font-bold text-teal-800 mb-4">General Settings</h2>
+        <form action="/admin/settings/general" method="POST">
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Grace Period (minutes)</label>
+                    <input type="number" name="grace_period" value="{{ settings.grace_period }}" min="0" class="mt-1 w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500">
+                    <p class="text-xs text-gray-500 mt-1">Employees won't be marked late within this period</p>
+                </div>
+                <p class="text-sm text-gray-500 italic">Note: Work start and end times are now set individually per employee in the Employees section.</p>
+            </div>
+            <button type="submit" class="mt-4 w-full bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700">
+                Save Settings
+            </button>
+        </form>
+    </div>
+
+    <div class="bg-white rounded-xl shadow p-6">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-bold text-teal-800">Statutory Deductions</h2>
+            <button onclick="document.getElementById('addDeductionModal').classList.remove('hidden')" class="text-teal-600 hover:text-teal-800">
+                <i class="fas fa-plus"></i> Add
+            </button>
+        </div>
+        <div class="space-y-3">
+            {% for ded in deductions %}
+            <div class="p-4 bg-gray-50 rounded-lg">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <div class="font-medium text-gray-900 flex items-center">
+                            {{ ded.name }}
+                            {% if not ded.is_active %}
+                            <span class="ml-2 px-2 py-0.5 text-xs bg-gray-200 text-gray-600 rounded">Inactive</span>
+                            {% endif %}
+                        </div>
+                        <div class="text-sm text-gray-500 mt-1">
+                            {% if ded.is_percentage %}
+                            Employee: {{ ded.employee_rate }}% | Employer: {{ ded.employer_rate }}%
+                            {% else %}
+                            Employee: ₱{{ "%.2f"|format(ded.employee_rate) }} | Employer: ₱{{ "%.2f"|format(ded.employer_rate) }}
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="flex space-x-2">
+                        {% if session.get('admin_role') == 'master_admin' %}
+                        <button onclick="editDeduction({{ ded.id }}, '{{ ded.name }}', {{ ded.is_percentage }}, {{ ded.employee_rate }}, {{ ded.employer_rate }}, {{ ded.is_active }})" class="text-teal-600 hover:text-teal-800">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button onclick="confirmDeleteDeduction({{ ded.id }}, '{{ ded.name }}')" class="text-red-600 hover:text-red-800">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <p class="text-gray-500 text-center py-4">No deductions configured</p>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="bg-white rounded-xl shadow p-6 lg:col-span-2">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-bold text-teal-800">Holidays</h2>
+            <button onclick="document.getElementById('addHolidayModal').classList.remove('hidden')" class="text-teal-600 hover:text-teal-800">
+                <i class="fas fa-plus"></i> Add Holiday
+            </button>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {% for holiday in holidays %}
+            <div class="p-4 bg-gray-50 rounded-lg flex justify-between items-center">
+                <div>
+                    <div class="font-medium text-gray-900">{{ holiday.name }}</div>
+                    <div class="text-sm text-gray-500">{{ holiday.date }}</div>
+                    <span class="text-xs px-2 py-0.5 rounded-full {% if holiday.type == 'regular' %}bg-coral-100 text-coral-300{% else %}bg-lime-300 text-lime-600{% endif %}">
+                        {{ holiday.type|title }} Holiday
+                    </span>
+                </div>
+                {% if session.get('admin_role') == 'master_admin' %}
+                <button onclick="confirmDeleteHoliday({{ holiday.id }}, '{{ holiday.name }}')" class="text-red-600 hover:text-red-800">
+                    <i class="fas fa-trash"></i>
+                </button>
+                {% endif %}
+            </div>
+            {% else %}
+            <p class="text-gray-500 text-center py-4 col-span-full">No holidays configured</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+{% if session.get('admin_role') == 'master_admin' %}
+<div class="mt-6 bg-red-50 border border-red-200 rounded-xl p-6">
+    <h2 class="text-xl font-bold text-red-800 mb-4"><i class="fas fa-exclamation-triangle mr-2"></i>Danger Zone</h2>
+    <p class="text-red-700 mb-4">The following actions are irreversible. Proceed with extreme caution.</p>
+    
+    <div class="bg-white border border-red-300 rounded-lg p-4">
+        <h3 class="font-bold text-red-800 mb-2">Reset All Data</h3>
+        <p class="text-sm text-gray-600 mb-4">This will permanently delete all employees, attendance records, payroll data, and activity logs. Branches, deductions, holidays, and admin accounts will be preserved.</p>
+        <button onclick="document.getElementById('resetDatabaseModal').classList.remove('hidden')" 
+                class="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700">
+            <i class="fas fa-database mr-2"></i>Reset Database
+        </button>
+    </div>
+</div>
+{% endif %}
+
+<div id="addDeductionModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-xl p-6 w-full max-w-md">
+        <h2 class="text-xl font-bold text-teal-800 mb-4">Add Statutory Deduction</h2>
+        <form action="/admin/deductions/add" method="POST">
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Name</label>
+                    <input type="text" name="name" required class="mt-1 w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500">
+                </div>
+                <div class="flex items-center">
+                    <input type="checkbox" name="is_percentage" id="add_is_percentage" class="mr-2">
+                    <label for="add_is_percentage" class="text-sm text-gray-700">Calculate as percentage</label>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Employee Rate/Amount</label>
+                        <input type="number" name="employee_rate" step="0.01" required class="mt-1 w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Employer Rate/Amount</label>
+                        <input type="number" name="employer_rate" step="0.01" required class="mt-1 w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500">
+                    </div>
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end space-x-3">
+                <button type="button" onclick="document.getElementById('addDeductionModal').classList.add('hidden')" class="px-4 py-2 border rounded-lg hover:bg-gray-50">Cancel</button>
+                <button type="submit" class="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700">Add Deduction</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="editDeductionModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-xl p-6 w-full max-w-md">
+        <h2 class="text-xl font-bold text-teal-800 mb-4">Edit Deduction</h2>
+        <form id="editDeductionForm" method="POST">
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Name</label>
+                    <input type="text" name="name" id="edit_ded_name" required class="mt-1 w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500">
+                </div>
+                <div class="flex items-center">
+                    <input type="checkbox" name="is_percentage" id="edit_is_percentage" class="mr-2">
+                    <label for="edit_is_percentage" class="text-sm text-gray-700">Calculate as percentage</label>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Employee Rate/Amount</label>
+                        <input type="number" name="employee_rate" id="edit_emp_rate" step="0.01" required class="mt-1 w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Employer Rate/Amount</label>
+                        <input type="number" name="employer_rate" id="edit_er_rate" step="0.01" required class="mt-1 w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500">
+                    </div>
+                </div>
+                <div class="flex items-center">
+                    <input type="checkbox" name="is_active" id="edit_is_active" class="mr-2">
+                    <label for="edit_is_active" class="text-sm text-gray-700">Active</label>
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end space-x-3">
+                <button type="button" onclick="document.getElementById('editDeductionModal').classList.add('hidden')" class="px-4 py-2 border rounded-lg hover:bg-gray-50">Cancel</button>
+                <button type="submit" class="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="addHolidayModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-xl p-6 w-full max-w-md">
+        <h2 class="text-xl font-bold text-teal-800 mb-4">Add Holiday</h2>
+        <form action="/admin/holidays/add" method="POST">
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Holiday Name</label>
+                    <input type="text" name="name" required class="mt-1 w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Date</label>
+                    <input type="date" name="date" required class="mt-1 w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Type</label>
+                    <select name="type" required class="mt-1 w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500">
+                        <option value="regular">Regular Holiday (200%)</option>
+                        <option value="special">Special Non-Working Day (130%)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end space-x-3">
+                <button type="button" onclick="document.getElementById('addHolidayModal').classList.add('hidden')" class="px-4 py-2 border rounded-lg hover:bg-gray-50">Cancel</button>
+                <button type="submit" class="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700">Add Holiday</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="deleteDeductionModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-xl p-6 w-full max-w-md">
+        <h2 class="text-xl font-bold text-red-600 mb-4"><i class="fas fa-exclamation-triangle mr-2"></i>Delete Deduction</h2>
+        <p class="text-gray-700 mb-4">Are you sure you want to delete "<span id="deleteDeductionName" class="font-bold"></span>"?</p>
+        <form method="POST" id="deleteDeductionForm">
+            <div class="mb-4">
+                <label class="block text-gray-700 font-medium mb-1">Enter your password to confirm</label>
+                <input type="password" name="password" required class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-red-500">
+            </div>
+            <div class="flex justify-end space-x-3">
+                <button type="button" onclick="document.getElementById('deleteDeductionModal').classList.add('hidden')" class="px-4 py-2 border rounded-lg hover:bg-gray-50">Cancel</button>
+                <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">Delete</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="deleteHolidayModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-xl p-6 w-full max-w-md">
+        <h2 class="text-xl font-bold text-red-600 mb-4"><i class="fas fa-exclamation-triangle mr-2"></i>Delete Holiday</h2>
+        <p class="text-gray-700 mb-4">Are you sure you want to delete "<span id="deleteHolidayName" class="font-bold"></span>"?</p>
+        <form method="POST" id="deleteHolidayForm">
+            <div class="mb-4">
+                <label class="block text-gray-700 font-medium mb-1">Enter your password to confirm</label>
+                <input type="password" name="password" required class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-red-500">
+            </div>
+            <div class="flex justify-end space-x-3">
+                <button type="button" onclick="document.getElementById('deleteHolidayModal').classList.add('hidden')" class="px-4 py-2 border rounded-lg hover:bg-gray-50">Cancel</button>
+                <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">Delete</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="resetDatabaseModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-xl p-6 w-full max-w-md">
+        <h2 class="text-2xl font-bold text-red-600 mb-4"><i class="fas fa-radiation mr-2"></i>DANGER: Reset Database</h2>
+        <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+            <p class="text-red-800 font-bold mb-2">This action will permanently delete:</p>
+            <ul class="text-red-700 text-sm list-disc ml-4 space-y-1">
+                <li>All employees</li>
+                <li>All attendance records and photos</li>
+                <li>All payroll periods and records</li>
+                <li>All activity logs</li>
+            </ul>
+        </div>
+        <form action="/admin/database-reset" method="POST">
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Type "DELETE ALL DATA" to confirm</label>
+                    <input type="text" name="confirm_text" required placeholder="DELETE ALL DATA" 
+                           class="mt-1 w-full px-3 py-2 border border-red-300 rounded-lg focus:ring-2 focus:ring-red-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Enter your password</label>
+                    <input type="password" name="password" required 
+                           class="mt-1 w-full px-3 py-2 border border-red-300 rounded-lg focus:ring-2 focus:ring-red-500">
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end space-x-3">
+                <button type="button" onclick="document.getElementById('resetDatabaseModal').classList.add('hidden')" 
+                        class="px-4 py-2 border rounded-lg hover:bg-gray-50">Cancel</button>
+                <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                    <i class="fas fa-trash-alt mr-2"></i>Reset Database
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% block scripts %}
+<script>
+function editDeduction(id, name, isPercentage, empRate, erRate, isActive) {
+    document.getElementById('editDeductionForm').action = '/admin/deductions/' + id + '/edit';
+    document.getElementById('edit_ded_name').value = name;
+    document.getElementById('edit_is_percentage').checked = isPercentage == 1;
+    document.getElementById('edit_emp_rate').value = empRate;
+    document.getElementById('edit_er_rate').value = erRate;
+    document.getElementById('edit_is_active').checked = isActive == 1;
+    document.getElementById('editDeductionModal').classList.remove('hidden');
+}
+
+function confirmDeleteDeduction(id, name) {
+    document.getElementById('deleteDeductionForm').action = '/admin/deductions/' + id + '/delete';
+    document.getElementById('deleteDeductionName').textContent = name;
+    document.getElementById('deleteDeductionModal').classList.remove('hidden');
+}
+
+function confirmDeleteHoliday(id, name) {
+    document.getElementById('deleteHolidayForm').action = '/admin/holidays/' + id + '/delete';
+    document.getElementById('deleteHolidayName').textContent = name;
+    document.getElementById('deleteHolidayModal').classList.remove('hidden');
+}
+</script>
+{% endblock %}
+{% endblock %}

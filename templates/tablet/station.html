@@ -1,0 +1,642 @@
+{% extends 'base.html' %}
+
+{% block title %}Tablet Station - 3DBotics{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-teal-700 to-teal-900 p-4">
+    <div id="mainScreen" class="max-w-4xl mx-auto pt-8">
+        <div class="text-center mb-8">
+            <div class="logo-badge h-28 w-28 mx-auto mb-4">
+                <img src="/static/logo.png" alt="3DBotics" class="h-16">
+            </div>
+            <p class="text-xl text-teal-100">Time-In / Time-Out Station</p>
+            <p class="text-3xl font-mono text-white mt-4" id="currentTime"></p>
+            <p class="text-xl text-teal-200" id="currentDate"></p>
+        </div>
+
+        <div id="employeeList" class="bg-white rounded-2xl shadow-2xl p-6">
+            <h2 class="text-2xl font-bold text-teal-800 mb-6 text-center">Select Your Name</h2>
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-4 max-h-96 overflow-y-auto">
+                {% for emp in employees %}
+                <button onclick="selectEmployee({{ emp.id }}, '{{ emp.first_name }} {{ emp.last_name }}', '{{ emp.branch_name or 'Main Branch' }}')" 
+                        class="p-6 bg-teal-50 hover:bg-teal-100 rounded-xl text-center transition-all duration-200 transform hover:scale-105 border-2 border-transparent hover:border-teal-400">
+                    <div class="text-xl font-bold text-teal-800">{{ emp.first_name }}</div>
+                    <div class="text-lg text-gray-600">{{ emp.last_name }}</div>
+                    <div class="text-sm text-gray-400 mt-1">{{ emp.employee_id }}</div>
+                </button>
+                {% else %}
+                <p class="col-span-full text-center text-gray-500 py-8">No active employees found</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div id="pinScreen" class="hidden max-w-md mx-auto pt-12">
+        <div class="text-center mb-6">
+            <button onclick="backToList()" class="text-white text-lg hover:text-teal-200">
+                <i class="fas fa-arrow-left mr-2"></i>Back
+            </button>
+        </div>
+        <div class="bg-white rounded-2xl shadow-2xl p-8">
+            <h2 class="text-2xl font-bold text-teal-800 mb-2 text-center">Enter PIN</h2>
+            <p class="text-gray-500 text-center mb-6" id="selectedName"></p>
+            
+            <div class="flex justify-center mb-6">
+                <div class="flex space-x-4">
+                    <div class="w-4 h-4 rounded-full border-2 border-gray-400 pin-dot" id="dot1"></div>
+                    <div class="w-4 h-4 rounded-full border-2 border-gray-400 pin-dot" id="dot2"></div>
+                    <div class="w-4 h-4 rounded-full border-2 border-gray-400 pin-dot" id="dot3"></div>
+                    <div class="w-4 h-4 rounded-full border-2 border-gray-400 pin-dot" id="dot4"></div>
+                </div>
+            </div>
+            
+            <p id="pinError" class="text-red-500 text-center mb-4 hidden"></p>
+            
+            <div class="grid grid-cols-3 gap-4">
+                {% for num in range(1, 10) %}
+                <button onclick="enterPin('{{ num }}')" class="p-6 text-3xl font-bold bg-gray-100 hover:bg-teal-100 rounded-xl transition-all">{{ num }}</button>
+                {% endfor %}
+                <button onclick="clearPin()" class="p-6 text-xl font-bold bg-coral-100 hover:bg-red-200 text-red-600 rounded-xl transition-all">Clear</button>
+                <button onclick="enterPin('0')" class="p-6 text-3xl font-bold bg-gray-100 hover:bg-teal-100 rounded-xl transition-all">0</button>
+                <button onclick="submitPin()" class="p-6 text-xl font-bold bg-teal-500 hover:bg-teal-600 text-white rounded-xl transition-all">
+                    <i class="fas fa-check"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="purposeScreen" class="hidden max-w-md mx-auto pt-12">
+        <div class="text-center mb-6">
+            <button onclick="backToList()" class="text-white text-lg hover:text-teal-200">
+                <i class="fas fa-arrow-left mr-2"></i>Back
+            </button>
+        </div>
+        <div class="bg-white rounded-2xl shadow-2xl p-8">
+            <h2 class="text-2xl font-bold text-teal-800 mb-2 text-center">Select Purpose</h2>
+            <p class="text-gray-500 text-center mb-6" id="purposeName"></p>
+            
+            <div id="clockInOptions" class="hidden space-y-3">
+                <button onclick="selectPurpose('clock_in', 'time_in')" class="w-full p-5 text-xl font-bold bg-teal-500 hover:bg-teal-600 text-white rounded-xl transition-all">
+                    <i class="fas fa-sign-in-alt mr-3"></i>Clock In
+                </button>
+                <button onclick="showEarlyStartModal()" class="w-full p-5 text-xl font-bold bg-amber-500 hover:bg-amber-600 text-white rounded-xl transition-all">
+                    <i class="fas fa-sun mr-3"></i>Official Early Start
+                    <span class="block text-sm font-normal mt-1">(Requires Admin Auth Code)</span>
+                </button>
+                <button onclick="selectPurpose('lunch_break_in', 'time_in')" class="w-full p-5 text-xl font-bold bg-lime-500 hover:bg-lime-600 text-white rounded-xl transition-all">
+                    <i class="fas fa-utensils mr-3"></i>Lunch Break - In
+                </button>
+                <button onclick="selectPurpose('snack_break_in', 'time_in')" class="w-full p-5 text-xl font-bold bg-cyan-500 hover:bg-cyan-600 text-white rounded-xl transition-all">
+                    <i class="fas fa-coffee mr-3"></i>Snack Break - In
+                </button>
+                <button onclick="selectPurpose('emergency_in', 'time_in')" class="w-full p-5 text-xl font-bold bg-coral-500 hover:bg-coral-600 text-white rounded-xl transition-all" style="background-color: #E8886A;">
+                    <i class="fas fa-exclamation-circle mr-3"></i>Emergency - In
+                </button>
+            </div>
+            
+            <div id="clockOutOptions" class="hidden space-y-3">
+                <button onclick="selectPurpose('lunch_break_out', 'time_out')" class="w-full p-5 text-xl font-bold bg-lime-600 hover:bg-lime-700 text-white rounded-xl transition-all">
+                    <i class="fas fa-utensils mr-3"></i>Lunch Break - Out
+                </button>
+                <button onclick="selectPurpose('snack_break_out', 'time_out')" class="w-full p-5 text-xl font-bold bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl transition-all">
+                    <i class="fas fa-coffee mr-3"></i>Snack Break - Out
+                </button>
+                <button onclick="selectPurpose('emergency_out', 'time_out')" class="w-full p-5 text-xl font-bold bg-orange-500 hover:bg-orange-600 text-white rounded-xl transition-all">
+                    <i class="fas fa-exclamation-circle mr-3"></i>Emergency - Out
+                    <span class="block text-sm font-normal mt-1">(CR, Family, Health Concerns)</span>
+                </button>
+                <button onclick="selectPurpose('unapproved_undertime_out', 'time_out')" class="w-full p-5 text-xl font-bold bg-red-500 hover:bg-red-600 text-white rounded-xl transition-all">
+                    <i class="fas fa-clock mr-3"></i>Unapproved Undertime - Out
+                </button>
+                <button onclick="selectPurpose('clock_out', 'time_out')" class="w-full p-5 text-xl font-bold bg-gray-600 hover:bg-gray-700 text-white rounded-xl transition-all">
+                    <i class="fas fa-sign-out-alt mr-3"></i>Clock Out
+                </button>
+                <button onclick="showOvertimeModal()" class="w-full p-5 text-xl font-bold bg-purple-500 hover:bg-purple-600 text-white rounded-xl transition-all">
+                    <i class="fas fa-moon mr-3"></i>Official Overtime
+                    <span class="block text-sm font-normal mt-1">(Requires Admin Auth Code - 1.25x Rate)</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="cameraScreen" class="hidden max-w-2xl mx-auto pt-12">
+        <div class="text-center mb-6">
+            <h2 class="text-3xl font-bold text-white mb-2" id="actionTitle">Take Selfie</h2>
+            <p class="text-xl text-teal-100" id="actionSubtitle"></p>
+            <p class="text-lg text-lime-300 font-bold mt-2" id="purposeLabel"></p>
+            <p class="text-sm text-teal-200 mt-2" id="gpsStatus">Acquiring GPS location...</p>
+        </div>
+        <div class="bg-white rounded-2xl shadow-2xl p-6">
+            <div class="relative">
+                <video id="video" class="w-full rounded-xl" autoplay playsinline></video>
+                <canvas id="canvas" class="hidden"></canvas>
+                <div class="absolute bottom-4 left-4 right-4 bg-black bg-opacity-60 text-white p-2 rounded text-sm" id="watermarkPreview">
+                    <div id="previewDateTime"></div>
+                    <div id="previewLocation"></div>
+                </div>
+            </div>
+            <div class="mt-6 flex justify-center">
+                <button onclick="capturePhoto()" id="captureBtn" class="px-12 py-6 bg-teal-500 hover:bg-teal-600 text-white text-2xl font-bold rounded-xl transition-all transform hover:scale-105">
+                    <i class="fas fa-camera mr-3"></i>Capture & Submit
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="successScreen" class="hidden max-w-md mx-auto text-center pt-12">
+        <div class="bg-white rounded-2xl shadow-2xl p-12">
+            <div class="text-teal-500 text-8xl mb-6">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <h2 class="text-3xl font-bold text-gray-800 mb-4" id="successTitle">Success!</h2>
+            <p class="text-xl text-gray-600" id="successMessage"></p>
+            <button onclick="resetStation()" class="mt-8 px-8 py-4 bg-teal-500 hover:bg-teal-600 text-white text-xl font-bold rounded-xl">
+                Done
+            </button>
+        </div>
+    </div>
+
+    <div id="authCodeModal" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
+        <div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md mx-4">
+            <h2 class="text-2xl font-bold text-teal-800 mb-2 text-center" id="authCodeTitle">Enter Authorization Code</h2>
+            <p class="text-gray-500 text-center mb-6" id="authCodeDescription"></p>
+            
+            <input type="text" id="authCodeInput" maxlength="8" 
+                   class="w-full text-center text-3xl font-mono py-4 border-2 border-gray-300 rounded-xl focus:border-teal-500 focus:outline-none uppercase tracking-widest"
+                   placeholder="XXXXXXXX">
+            
+            <p id="authCodeError" class="text-red-500 text-center mt-4 hidden"></p>
+            
+            <div class="mt-6 flex gap-4">
+                <button onclick="closeAuthCodeModal()" class="flex-1 py-4 text-xl font-bold bg-gray-300 hover:bg-gray-400 text-gray-700 rounded-xl transition-all">
+                    Cancel
+                </button>
+                <button onclick="verifyAuthCode()" id="verifyCodeBtn" class="flex-1 py-4 text-xl font-bold bg-teal-500 hover:bg-teal-600 text-white rounded-xl transition-all">
+                    Verify
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block scripts %}
+<script>
+let selectedEmployeeId = null;
+let selectedEmployeeName = '';
+let selectedBranch = '';
+let currentPin = '';
+let currentAction = '';
+let currentPurpose = '';
+let hasOpenRecord = false;
+let videoStream = null;
+let currentPosition = null;
+let currentPlaceName = '';
+let isLocationValid = true;
+let gpsError = false;
+let pendingAuthCodeType = '';
+let earlyStartApproved = false;
+let officialOvertimeApproved = false;
+
+const PURPOSE_LABELS = {
+    'clock_in': 'Clock In',
+    'clock_out': 'Clock Out',
+    'early_start': 'Official Early Start',
+    'official_overtime': 'Official Overtime',
+    'lunch_break_out': 'Lunch Break - Out',
+    'lunch_break_in': 'Lunch Break - In',
+    'snack_break_out': 'Snack Break - Out',
+    'snack_break_in': 'Snack Break - In',
+    'emergency_out': 'Emergency - Out',
+    'emergency_in': 'Emergency - In',
+    'unapproved_undertime_out': 'Unapproved Undertime - Out'
+};
+
+function formatTime12Hour(date) {
+    let hours = date.getHours();
+    let minutes = date.getMinutes();
+    let seconds = date.getSeconds();
+    let ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    minutes = minutes < 10 ? '0' + minutes : minutes;
+    seconds = seconds < 10 ? '0' + seconds : seconds;
+    return hours + ':' + minutes + ':' + seconds + ' ' + ampm;
+}
+
+function formatDate(date) {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return months[date.getMonth()] + ' ' + date.getDate() + ', ' + date.getFullYear();
+}
+
+function updateClock() {
+    const now = new Date();
+    document.getElementById('currentTime').textContent = formatTime12Hour(now);
+    
+    const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+    document.getElementById('currentDate').textContent = now.toLocaleDateString('en-US', dateOptions);
+    
+    const previewDateTime = document.getElementById('previewDateTime');
+    if (previewDateTime) {
+        previewDateTime.textContent = formatDate(now) + ' ' + formatTime12Hour(now);
+    }
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+function getGPSLocation() {
+    return new Promise((resolve, reject) => {
+        if (!navigator.geolocation) {
+            reject('GPS not supported');
+            return;
+        }
+        
+        let resolved = false;
+        
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                if (resolved) return;
+                resolved = true;
+                currentPosition = {
+                    lat: position.coords.latitude,
+                    lng: position.coords.longitude,
+                    accuracy: position.coords.accuracy
+                };
+                resolve(currentPosition);
+            },
+            (error) => {
+                if (resolved) return;
+                resolved = true;
+                gpsError = true;
+                reject(error.message);
+            },
+            { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
+        );
+        
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                if (resolved) return;
+                resolved = true;
+                currentPosition = {
+                    lat: position.coords.latitude,
+                    lng: position.coords.longitude,
+                    accuracy: position.coords.accuracy
+                };
+                resolve(currentPosition);
+            },
+            () => {},
+            { enableHighAccuracy: false, timeout: 5000, maximumAge: 300000 }
+        );
+    });
+}
+
+async function reverseGeocode(lat, lng) {
+    try {
+        const response = await fetch('/api/reverse-geocode', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ lat, lng })
+        });
+        const data = await response.json();
+        return data.place || 'Unknown location';
+    } catch (error) {
+        return 'Location unavailable';
+    }
+}
+
+async function validateLocation(branch, lat, lng) {
+    try {
+        const response = await fetch('/api/validate-location', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ branch, lat, lng })
+        });
+        const data = await response.json();
+        return { valid: data.valid, message: data.message };
+    } catch (error) {
+        return { valid: true, message: 'Validation unavailable' };
+    }
+}
+
+function selectEmployee(id, name, branch) {
+    selectedEmployeeId = id;
+    selectedEmployeeName = name;
+    selectedBranch = branch;
+    document.getElementById('selectedName').textContent = name;
+    document.getElementById('mainScreen').classList.add('hidden');
+    document.getElementById('pinScreen').classList.remove('hidden');
+    clearPin();
+}
+
+function backToList() {
+    document.getElementById('pinScreen').classList.add('hidden');
+    document.getElementById('mainScreen').classList.remove('hidden');
+    clearPin();
+}
+
+function enterPin(num) {
+    if (currentPin.length < 4) {
+        currentPin += num;
+        updatePinDots();
+    }
+}
+
+function clearPin() {
+    currentPin = '';
+    updatePinDots();
+    document.getElementById('pinError').classList.add('hidden');
+}
+
+function updatePinDots() {
+    for (let i = 1; i <= 4; i++) {
+        const dot = document.getElementById('dot' + i);
+        if (i <= currentPin.length) {
+            dot.classList.add('bg-teal-500');
+            dot.classList.remove('border-gray-400');
+        } else {
+            dot.classList.remove('bg-teal-500');
+            dot.classList.add('border-gray-400');
+        }
+    }
+}
+
+async function submitPin() {
+    if (currentPin.length !== 4) {
+        document.getElementById('pinError').textContent = 'Please enter 4 digits';
+        document.getElementById('pinError').classList.remove('hidden');
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/verify-pin', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ employee_id: selectedEmployeeId, pin: currentPin })
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+            hasOpenRecord = data.has_open_record;
+            document.getElementById('pinScreen').classList.add('hidden');
+            document.getElementById('purposeScreen').classList.remove('hidden');
+            document.getElementById('purposeName').textContent = selectedEmployeeName;
+            
+            if (hasOpenRecord) {
+                document.getElementById('clockInOptions').classList.add('hidden');
+                document.getElementById('clockOutOptions').classList.remove('hidden');
+            } else {
+                document.getElementById('clockInOptions').classList.remove('hidden');
+                document.getElementById('clockOutOptions').classList.add('hidden');
+            }
+        } else {
+            document.getElementById('pinError').textContent = data.message;
+            document.getElementById('pinError').classList.remove('hidden');
+            clearPin();
+        }
+    } catch (error) {
+        document.getElementById('pinError').textContent = 'Connection error. Please try again.';
+        document.getElementById('pinError').classList.remove('hidden');
+    }
+}
+
+function selectPurpose(purpose, action) {
+    currentPurpose = purpose;
+    currentAction = action;
+    
+    document.getElementById('purposeScreen').classList.add('hidden');
+    document.getElementById('cameraScreen').classList.remove('hidden');
+    
+    const purposeLabel = PURPOSE_LABELS[purpose] || purpose;
+    document.getElementById('actionTitle').textContent = purposeLabel;
+    document.getElementById('actionSubtitle').textContent = 'Take a selfie to record';
+    document.getElementById('purposeLabel').textContent = purposeLabel;
+    
+    startCamera();
+    startGPS();
+}
+
+function showEarlyStartModal() {
+    pendingAuthCodeType = 'early_start';
+    document.getElementById('authCodeTitle').textContent = 'Early Start Authorization';
+    document.getElementById('authCodeDescription').textContent = 'Enter the admin authorization code to approve early clock-in before your scheduled start time.';
+    document.getElementById('authCodeInput').value = '';
+    document.getElementById('authCodeError').classList.add('hidden');
+    document.getElementById('authCodeModal').classList.remove('hidden');
+    document.getElementById('authCodeInput').focus();
+}
+
+function showOvertimeModal() {
+    pendingAuthCodeType = 'overtime';
+    document.getElementById('authCodeTitle').textContent = 'Overtime Authorization';
+    document.getElementById('authCodeDescription').textContent = 'Enter the admin authorization code to approve official overtime (paid at 1.25x DOLE rate).';
+    document.getElementById('authCodeInput').value = '';
+    document.getElementById('authCodeError').classList.add('hidden');
+    document.getElementById('authCodeModal').classList.remove('hidden');
+    document.getElementById('authCodeInput').focus();
+}
+
+function closeAuthCodeModal() {
+    document.getElementById('authCodeModal').classList.add('hidden');
+    pendingAuthCodeType = '';
+}
+
+async function verifyAuthCode() {
+    const code = document.getElementById('authCodeInput').value.trim().toUpperCase();
+    if (!code) {
+        document.getElementById('authCodeError').textContent = 'Please enter an authorization code';
+        document.getElementById('authCodeError').classList.remove('hidden');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/verify-auth-code', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code: code, code_type: pendingAuthCodeType })
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+            closeAuthCodeModal();
+            
+            if (pendingAuthCodeType === 'early_start') {
+                earlyStartApproved = true;
+                selectPurpose('early_start', 'time_in');
+            } else if (pendingAuthCodeType === 'overtime') {
+                officialOvertimeApproved = true;
+                selectPurpose('official_overtime', 'time_out');
+            }
+        } else {
+            document.getElementById('authCodeError').textContent = data.message || 'Invalid or expired code';
+            document.getElementById('authCodeError').classList.remove('hidden');
+        }
+    } catch (error) {
+        document.getElementById('authCodeError').textContent = 'Connection error. Please try again.';
+        document.getElementById('authCodeError').classList.remove('hidden');
+    }
+}
+
+async function startGPS() {
+    const gpsStatus = document.getElementById('gpsStatus');
+    const previewLocation = document.getElementById('previewLocation');
+    
+    try {
+        await getGPSLocation();
+        
+        currentPlaceName = await reverseGeocode(currentPosition.lat, currentPosition.lng);
+        
+        const validation = await validateLocation(selectedBranch, currentPosition.lat, currentPosition.lng);
+        isLocationValid = validation.valid;
+        
+        if (isLocationValid) {
+            gpsStatus.textContent = `Location: ${currentPlaceName}`;
+            gpsStatus.classList.remove('text-teal-200', 'text-red-300');
+            gpsStatus.classList.add('text-green-300');
+            previewLocation.textContent = `Branch: ${selectedBranch} | ${currentPlaceName}`;
+        } else {
+            gpsStatus.textContent = `INVALID LOCATION - ${currentPlaceName}`;
+            gpsStatus.classList.remove('text-teal-200', 'text-green-300');
+            gpsStatus.classList.add('text-red-300');
+            previewLocation.innerHTML = `Branch: ${selectedBranch} | ${currentPlaceName}<br><span class="text-red-400 font-bold">INVALID LOCATION</span>`;
+        }
+    } catch (error) {
+        currentPlaceName = 'GPS unavailable';
+        isLocationValid = true;
+        gpsStatus.textContent = 'GPS unavailable - Branch location will be used';
+        gpsStatus.classList.remove('text-teal-200');
+        gpsStatus.classList.add('text-yellow-300');
+        previewLocation.textContent = `Branch: ${selectedBranch} | GPS: Not available`;
+    }
+}
+
+async function startCamera() {
+    try {
+        const video = document.getElementById('video');
+        videoStream = await navigator.mediaDevices.getUserMedia({ 
+            video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } } 
+        });
+        video.srcObject = videoStream;
+    } catch (error) {
+        alert('Unable to access camera. Please allow camera access.');
+    }
+}
+
+function stopCamera() {
+    if (videoStream) {
+        videoStream.getTracks().forEach(track => track.stop());
+        videoStream = null;
+    }
+}
+
+async function capturePhoto() {
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0);
+    
+    const now = new Date();
+    const dateStr = formatDate(now);
+    const timeStr = formatTime12Hour(now);
+    
+    const watermarkHeight = isLocationValid ? 80 : 100;
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+    ctx.fillRect(0, canvas.height - watermarkHeight, canvas.width, watermarkHeight);
+    
+    ctx.fillStyle = 'white';
+    ctx.font = 'bold 16px Arial';
+    ctx.fillText(`${dateStr} ${timeStr}`, 10, canvas.height - watermarkHeight + 20);
+    ctx.fillText(`Branch: ${selectedBranch}`, 10, canvas.height - watermarkHeight + 40);
+    
+    let locationText = currentPlaceName || 'GPS: Not available';
+    ctx.fillText(`Location: ${locationText}`, 10, canvas.height - watermarkHeight + 60);
+    
+    if (!isLocationValid) {
+        ctx.fillStyle = '#FF4444';
+        ctx.font = 'bold 18px Arial';
+        ctx.fillText('INVALID LOCATION', 10, canvas.height - watermarkHeight + 85);
+        
+        ctx.save();
+        ctx.fillStyle = 'rgba(255, 0, 0, 0.3)';
+        ctx.font = 'bold 48px Arial';
+        ctx.translate(canvas.width / 2, canvas.height / 2);
+        ctx.rotate(-Math.PI / 6);
+        ctx.textAlign = 'center';
+        ctx.fillText('INVALID LOCATION', 0, 0);
+        ctx.restore();
+    }
+    
+    const photoData = canvas.toDataURL('image/jpeg', 0.8);
+    
+    stopCamera();
+    
+    try {
+        const response = await fetch('/api/record-attendance', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                employee_id: selectedEmployeeId,
+                action: currentAction,
+                purpose: currentPurpose,
+                photo: photoData,
+                gps_lat: currentPosition ? currentPosition.lat : null,
+                gps_lng: currentPosition ? currentPosition.lng : null,
+                place_name: currentPlaceName,
+                is_location_valid: isLocationValid,
+                branch: selectedBranch,
+                early_start_approved: earlyStartApproved,
+                official_overtime_approved: officialOvertimeApproved
+            })
+        });
+        const data = await response.json();
+        
+        document.getElementById('cameraScreen').classList.add('hidden');
+        document.getElementById('successScreen').classList.remove('hidden');
+        
+        if (data.success) {
+            const purposeLabel = PURPOSE_LABELS[currentPurpose] || currentPurpose;
+            document.getElementById('successTitle').textContent = purposeLabel + ' Recorded!';
+            let message = `${selectedEmployeeName}, your ${purposeLabel.toLowerCase()} has been recorded.`;
+            if (!isLocationValid) {
+                message += '\n(Warning: Location was outside valid area)';
+            }
+            document.getElementById('successMessage').textContent = message;
+        } else {
+            document.getElementById('successTitle').textContent = 'Notice';
+            document.getElementById('successMessage').textContent = data.message;
+        }
+        
+        setTimeout(resetStation, 5000);
+    } catch (error) {
+        alert('Error recording attendance. Please try again.');
+        resetStation();
+    }
+}
+
+function resetStation() {
+    stopCamera();
+    selectedEmployeeId = null;
+    selectedEmployeeName = '';
+    selectedBranch = '';
+    currentPin = '';
+    currentAction = '';
+    currentPurpose = '';
+    hasOpenRecord = false;
+    currentPosition = null;
+    currentPlaceName = '';
+    isLocationValid = true;
+    gpsError = false;
+    earlyStartApproved = false;
+    officialOvertimeApproved = false;
+    pendingAuthCodeType = '';
+    
+    document.getElementById('pinScreen').classList.add('hidden');
+    document.getElementById('purposeScreen').classList.add('hidden');
+    document.getElementById('cameraScreen').classList.add('hidden');
+    document.getElementById('successScreen').classList.add('hidden');
+    document.getElementById('authCodeModal').classList.add('hidden');
+    document.getElementById('mainScreen').classList.remove('hidden');
+}
+</script>
+{% endblock %}
+{% endblock %}

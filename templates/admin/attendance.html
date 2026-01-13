@@ -1,0 +1,215 @@
+{% extends 'admin/base_admin.html' %}
+
+{% block title %}Attendance - 3DBotics Admin{% endblock %}
+
+{% block admin_content %}
+<div class="flex justify-between items-center mb-6">
+    <h1 class="text-3xl font-bold text-teal-800">Attendance Records</h1>
+</div>
+
+<div class="bg-white rounded-xl shadow p-4 mb-6">
+    <form method="GET" action="/admin/attendance" class="flex flex-wrap gap-4 items-end">
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">From Date</label>
+            <input type="date" name="date_from" value="{{ date_from }}" class="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500">
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">To Date</label>
+            <input type="date" name="date_to" value="{{ date_to }}" class="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500">
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Employee</label>
+            <select name="employee_id" class="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500">
+                <option value="">All Employees</option>
+                {% for emp in employees %}
+                <option value="{{ emp.id }}" {% if employee_filter|string == emp.id|string %}selected{% endif %}>{{ emp.first_name }} {{ emp.last_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="flex gap-2">
+            <button type="submit" class="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700">
+                <i class="fas fa-search mr-1"></i> Filter
+            </button>
+            <a href="/admin/attendance" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                <i class="fas fa-redo mr-1"></i> Reset
+            </a>
+        </div>
+    </form>
+</div>
+
+<p class="text-sm text-gray-500 mb-4">Showing {{ attendance|length }} record(s) from {{ date_from }} to {{ date_to }}</p>
+
+<div class="bg-white rounded-xl shadow overflow-hidden">
+    <table class="w-full">
+        <thead class="bg-gray-50">
+            <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Employee</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">In Purpose</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Time In</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Out Purpose</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Time Out</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tardiness</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Undertime</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200">
+            {% for att in attendance %}
+            <tr>
+                <td class="px-6 py-4 text-sm text-gray-900">{{ att.date }}</td>
+                <td class="px-6 py-4">
+                    <div class="text-sm font-medium text-gray-900">{{ att.first_name }} {{ att.last_name }}</div>
+                    <div class="text-sm text-gray-500">{{ att.emp_code }}</div>
+                </td>
+                <td class="px-6 py-4 text-sm">
+                    {% set in_purpose = att.time_in_purpose or 'clock_in' %}
+                    {% if in_purpose == 'clock_in' %}
+                    <span class="px-2 py-1 text-xs rounded-full bg-teal-100 text-teal-700">Clock In</span>
+                    {% elif in_purpose == 'lunch_break_in' %}
+                    <span class="px-2 py-1 text-xs rounded-full bg-lime-100 text-lime-700">Lunch In</span>
+                    {% elif in_purpose == 'snack_break_in' %}
+                    <span class="px-2 py-1 text-xs rounded-full bg-cyan-100 text-cyan-700">Snack In</span>
+                    {% elif in_purpose == 'emergency_in' %}
+                    <span class="px-2 py-1 text-xs rounded-full bg-orange-100 text-orange-700">Emergency In</span>
+                    {% else %}
+                    <span class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-700">{{ in_purpose }}</span>
+                    {% endif %}
+                </td>
+                <td class="px-6 py-4 text-sm text-gray-900">
+                    {% if att.time_in %}
+                    {{ att.time_in.strftime('%H:%M') if att.time_in is not string else att.time_in[11:16] }}
+                    {% if att.time_in_photo %}
+                    <a href="/{{ att.time_in_photo }}" target="_blank" class="text-teal-500 ml-2"><i class="fas fa-camera"></i></a>
+                    {% endif %}
+                    {% else %}
+                    -
+                    {% endif %}
+                </td>
+                <td class="px-6 py-4 text-sm">
+                    {% if att.time_out_purpose %}
+                    {% set out_purpose = att.time_out_purpose %}
+                    {% if out_purpose == 'clock_out' %}
+                    <span class="px-2 py-1 text-xs rounded-full bg-gray-200 text-gray-700">Clock Out</span>
+                    {% elif out_purpose == 'lunch_break_out' %}
+                    <span class="px-2 py-1 text-xs rounded-full bg-lime-100 text-lime-700">Lunch Out</span>
+                    {% elif out_purpose == 'snack_break_out' %}
+                    <span class="px-2 py-1 text-xs rounded-full bg-cyan-100 text-cyan-700">Snack Out</span>
+                    {% elif out_purpose == 'emergency_out' %}
+                    <span class="px-2 py-1 text-xs rounded-full bg-orange-100 text-orange-700">Emergency Out</span>
+                    {% elif out_purpose == 'unapproved_undertime_out' %}
+                    <span class="px-2 py-1 text-xs rounded-full bg-red-100 text-red-700">Undertime</span>
+                    {% else %}
+                    <span class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-700">{{ out_purpose }}</span>
+                    {% endif %}
+                    {% else %}
+                    <span class="text-yellow-500"><i class="fas fa-clock"></i> Active</span>
+                    {% endif %}
+                </td>
+                <td class="px-6 py-4 text-sm text-gray-900">
+                    {% if att.time_out %}
+                    {% set time_out_str = att.time_out.strftime('%Y-%m-%d %H:%M') if att.time_out is not string else att.time_out %}
+                    {% set time_out_date = time_out_str[:10] %}
+                    {% set time_out_time = att.time_out.strftime('%H:%M') if att.time_out is not string else att.time_out[11:16] %}
+                    {% set record_date_str = att.date|string %}
+                    {% if time_out_date != record_date_str %}
+                    <span class="text-xs text-blue-600">({{ time_out_date[5:] }})</span>
+                    {% endif %}
+                    {{ time_out_time }}
+                    {% if att.time_out_photo %}
+                    <a href="/{{ att.time_out_photo }}" target="_blank" class="text-teal-500 ml-2"><i class="fas fa-camera"></i></a>
+                    {% endif %}
+                    {% else %}
+                    -
+                    {% endif %}
+                </td>
+                <td class="px-6 py-4 text-sm {% if att.requires_admin_review %}text-purple-600 font-bold{% elif att.tardiness_minutes > 0 %}text-red-600{% else %}text-gray-900{% endif %}">
+                    {% if att.requires_admin_review %}
+                    <span class="px-2 py-1 text-xs rounded-full bg-purple-100 text-purple-700" title="{{ att.admin_review_reason }}">
+                        <i class="fas fa-exclamation-triangle"></i> Review
+                    </span>
+                    {% elif att.tardiness_minutes > 0 %}{{ att.tardiness_minutes }} mins{% else %}-{% endif %}
+                </td>
+                <td class="px-6 py-4 text-sm {% if att.requires_admin_review %}text-purple-600 font-bold{% elif att.undertime_minutes > 0 %}text-orange-600{% else %}text-gray-900{% endif %}">
+                    {% if att.requires_admin_review %}
+                    <span class="px-2 py-1 text-xs rounded-full bg-purple-100 text-purple-700" title="{{ att.admin_review_reason }}">
+                        <i class="fas fa-user-shield"></i> Admin
+                    </span>
+                    {% elif att.undertime_minutes > 0 %}{{ att.undertime_minutes }} mins{% else %}-{% endif %}
+                </td>
+                <td class="px-6 py-4 text-sm space-x-2">
+                    {% if session.get('admin_role') == 'master_admin' %}
+                    {% if att.time_out and not att.is_overtime_approved and att.time_out_purpose == 'clock_out' %}
+                    <button onclick="approveOT({{ att.id }})" class="text-teal-600 hover:text-teal-800">
+                        <i class="fas fa-clock"></i> OT
+                    </button>
+                    {% endif %}
+                    <button onclick="confirmDelete({{ att.id }}, '{{ att.first_name }} {{ att.last_name }}')" class="text-red-600 hover:text-red-800">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                    {% else %}
+                    <span class="text-gray-400">View only</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="9" class="px-6 py-8 text-center text-gray-500">No attendance records found for selected date range</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div id="otModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-xl p-6 w-full max-w-md">
+        <h2 class="text-xl font-bold text-teal-800 mb-4">Approve Overtime</h2>
+        <form action="/admin/attendance/overtime" method="POST">
+            <input type="hidden" name="attendance_id" id="ot_attendance_id">
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Overtime Hours</label>
+                    <input type="number" name="hours" step="0.5" min="0.5" required class="mt-1 w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500" placeholder="e.g., 2">
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end space-x-3">
+                <button type="button" onclick="document.getElementById('otModal').classList.add('hidden')" class="px-4 py-2 border rounded-lg hover:bg-gray-50">Cancel</button>
+                <button type="submit" class="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700">Approve</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="deleteModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-xl p-6 w-full max-w-md">
+        <h2 class="text-xl font-bold text-red-600 mb-4"><i class="fas fa-exclamation-triangle mr-2"></i>Delete Attendance Record</h2>
+        <p class="text-gray-600 mb-4">Are you sure you want to delete the attendance record for <span id="deleteName" class="font-bold"></span>?</p>
+        <p class="text-sm text-gray-500 mb-4">This action will be logged for audit purposes.</p>
+        <form id="deleteForm" method="POST">
+            <div class="mb-4">
+                <label class="block text-gray-700 font-medium mb-1">Enter your password to confirm</label>
+                <input type="password" name="password" required class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-red-500">
+            </div>
+            <div class="flex justify-end space-x-3">
+                <button type="button" onclick="document.getElementById('deleteModal').classList.add('hidden')" class="px-4 py-2 border rounded-lg hover:bg-gray-50">Cancel</button>
+                <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">Delete</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% block scripts %}
+<script>
+function approveOT(id) {
+    document.getElementById('ot_attendance_id').value = id;
+    document.getElementById('otModal').classList.remove('hidden');
+}
+
+function confirmDelete(id, name) {
+    document.getElementById('deleteForm').action = '/admin/attendance/' + id + '/delete';
+    document.getElementById('deleteName').textContent = name;
+    document.getElementById('deleteModal').classList.remove('hidden');
+}
+</script>
+{% endblock %}
+{% endblock %}

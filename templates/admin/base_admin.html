@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="flex min-h-screen">
+    <aside class="w-64 bg-teal-800 text-white flex flex-col">
+        <div class="p-4 text-center">
+            <div class="logo-badge h-20 w-20 mx-auto">
+                <img src="/static/logo.png" alt="3DBotics" class="h-12">
+            </div>
+            <p class="text-center text-teal-200 text-sm mt-2">Admin Panel</p>
+        </div>
+        <nav class="mt-4 flex-1">
+            <a href="/admin" class="flex items-center px-6 py-3 hover:bg-teal-700 {% if request.path == '/admin' %}bg-teal-700{% endif %}">
+                <i class="fas fa-tachometer-alt w-6"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="/admin/employees" class="flex items-center px-6 py-3 hover:bg-teal-700 {% if '/employees' in request.path %}bg-teal-700{% endif %}">
+                <i class="fas fa-users w-6"></i>
+                <span>Employees</span>
+            </a>
+            <a href="/admin/attendance" class="flex items-center px-6 py-3 hover:bg-teal-700 {% if '/attendance' in request.path %}bg-teal-700{% endif %}">
+                <i class="fas fa-clock w-6"></i>
+                <span>Attendance</span>
+            </a>
+            <a href="/admin/payroll" class="flex items-center px-6 py-3 hover:bg-teal-700 {% if '/payroll' in request.path %}bg-teal-700{% endif %}">
+                <i class="fas fa-money-bill-wave w-6"></i>
+                <span>Payroll</span>
+            </a>
+            <a href="/admin/13th-month" class="flex items-center px-6 py-3 hover:bg-teal-700 {% if '/13th-month' in request.path %}bg-teal-700{% endif %}">
+                <i class="fas fa-gift w-6"></i>
+                <span>13th Month</span>
+            </a>
+            <a href="/admin/settings" class="flex items-center px-6 py-3 hover:bg-teal-700 {% if '/settings' in request.path %}bg-teal-700{% endif %}">
+                <i class="fas fa-cog w-6"></i>
+                <span>Settings</span>
+            </a>
+            <a href="/admin/branches" class="flex items-center px-6 py-3 hover:bg-teal-700 {% if '/branches' in request.path %}bg-teal-700{% endif %}">
+                <i class="fas fa-building w-6"></i>
+                <span>Branches</span>
+            </a>
+            <a href="/admin/activity-logs" class="flex items-center px-6 py-3 hover:bg-teal-700 {% if '/activity-logs' in request.path %}bg-teal-700{% endif %}">
+                <i class="fas fa-history w-6"></i>
+                <span>Activity Logs</span>
+            </a>
+            {% if session.get('admin_role') == 'master_admin' %}
+            <hr class="my-2 border-teal-600">
+            <a href="/admin/admins" class="flex items-center px-6 py-3 hover:bg-teal-700 {% if '/admins' in request.path %}bg-teal-700{% endif %}">
+                <i class="fas fa-user-shield w-6"></i>
+                <span>Admin Users</span>
+            </a>
+            <a href="/admin/auth-codes" class="flex items-center px-6 py-3 hover:bg-teal-700 {% if '/auth-codes' in request.path %}bg-teal-700{% endif %}">
+                <i class="fas fa-key w-6"></i>
+                <span>Auth Codes</span>
+            </a>
+            {% endif %}
+            <hr class="my-4 border-teal-600">
+            <a href="/" class="flex items-center px-6 py-3 hover:bg-teal-700">
+                <i class="fas fa-home w-6"></i>
+                <span>Back to Home</span>
+            </a>
+        </nav>
+        
+        <div class="p-4 border-t border-teal-600">
+            <div class="flex items-center mb-3">
+                <div class="w-10 h-10 rounded-full bg-teal-600 flex items-center justify-center mr-3">
+                    {% if session.get('admin_role') == 'master_admin' %}
+                    <i class="fas fa-crown text-yellow-300"></i>
+                    {% else %}
+                    <i class="fas fa-user text-white"></i>
+                    {% endif %}
+                </div>
+                <div>
+                    <p class="font-medium text-sm">{{ session.get('admin_name', 'Admin') }}</p>
+                    <p class="text-xs text-teal-300">
+                        {% if session.get('admin_role') == 'master_admin' %}Master Admin{% else %}Sub Admin{% endif %}
+                    </p>
+                </div>
+            </div>
+            <a href="/admin/logout" class="flex items-center justify-center w-full px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg text-sm">
+                <i class="fas fa-sign-out-alt mr-2"></i>Logout
+            </a>
+        </div>
+    </aside>
+    
+    <main class="flex-1 p-8 overflow-auto">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="mb-4 p-4 rounded-lg {% if category == 'error' %}bg-red-100 text-red-700 border border-red-300{% else %}bg-green-100 text-green-700 border border-green-300{% endif %}">
+                        <i class="fas {% if category == 'error' %}fa-exclamation-circle{% else %}fa-check-circle{% endif %} mr-2"></i>
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        {% if session.get('admin_role') != 'master_admin' %}
+        <div class="mb-4 p-3 bg-blue-50 text-blue-700 rounded-lg border border-blue-200">
+            <i class="fas fa-info-circle mr-2"></i>
+            You are logged in as Sub Admin. You can view and compute payroll but cannot make changes.
+        </div>
+        {% endif %}
+        
+        {% block admin_content %}{% endblock %}
+    </main>
+</div>
+{% endblock %}

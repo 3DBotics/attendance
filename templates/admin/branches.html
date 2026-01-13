@@ -1,0 +1,163 @@
+{% extends 'admin/base_admin.html' %}
+
+{% block title %}Branches - 3DBotics Admin{% endblock %}
+
+{% block admin_content %}
+<div class="flex justify-between items-center mb-8">
+    <h1 class="text-3xl font-bold text-teal-800">Branch Management</h1>
+    {% if can_edit_delete %}
+    <button onclick="document.getElementById('addBranchModal').classList.remove('hidden')" 
+            class="bg-teal-600 text-white px-6 py-3 rounded-lg hover:bg-teal-700 text-lg">
+        <i class="fas fa-plus mr-2"></i>Add Branch
+    </button>
+    {% endif %}
+</div>
+
+<div class="bg-teal-50 border border-teal-200 rounded-lg p-4 mb-6">
+    <h3 class="font-bold text-teal-800 mb-2">About GPS Location Validation</h3>
+    <p class="text-teal-700 text-sm">
+        Set the GPS coordinates for each branch to validate employee attendance locations. 
+        If an employee clocks in/out from a location outside the configured radius, 
+        the photo will be watermarked with "INVALID LOCATION".
+    </p>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    {% for branch in branches %}
+    <div class="bg-white rounded-xl shadow p-6">
+        <h2 class="text-xl font-bold text-teal-800 mb-4">{{ branch.name }}</h2>
+        <p class="text-sm text-gray-500 mb-4">{{ branch.address or 'No address' }}</p>
+        
+        <form action="/admin/branches/{{ branch.id }}/gps" method="POST">
+            <div class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Latitude</label>
+                        <input type="number" name="latitude" step="0.000001" value="{{ branch.gps_latitude or '' }}" 
+                               placeholder="e.g., 14.5995"
+                               class="mt-1 w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Longitude</label>
+                        <input type="number" name="longitude" step="0.000001" value="{{ branch.gps_longitude or '' }}" 
+                               placeholder="e.g., 120.9842"
+                               class="mt-1 w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Valid Radius (meters)</label>
+                    <input type="number" name="radius" min="10" max="1000" value="{{ branch.gps_radius_meters or 100 }}" 
+                           class="mt-1 w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500">
+                    <p class="text-xs text-gray-500 mt-1">Employees must be within this distance from the GPS coordinates</p>
+                </div>
+                
+                {% if branch.gps_latitude and branch.gps_longitude %}
+                <div class="bg-teal-50 p-3 rounded-lg">
+                    <p class="text-sm text-teal-700">
+                        <i class="fas fa-map-marker-alt mr-2"></i>
+                        Currently configured: {{ branch.gps_latitude }}, {{ branch.gps_longitude }}
+                        ({{ branch.gps_radius_meters or 100 }}m radius)
+                    </p>
+                </div>
+                {% else %}
+                <div class="bg-yellow-50 p-3 rounded-lg">
+                    <p class="text-sm text-yellow-700">
+                        <i class="fas fa-exclamation-triangle mr-2"></i>
+                        No GPS configured - all locations will be accepted
+                    </p>
+                </div>
+                {% endif %}
+                
+                {% if can_edit_delete %}
+                <button type="submit" class="w-full bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700">
+                    <i class="fas fa-save mr-2"></i>Save GPS Settings
+                </button>
+                
+                <button type="button" onclick="confirmDeleteBranch({{ branch.id }}, '{{ branch.name }}')" 
+                        class="w-full mt-2 bg-red-100 text-red-600 px-4 py-2 rounded-lg hover:bg-red-200">
+                    <i class="fas fa-trash mr-2"></i>Delete Branch
+                </button>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+    {% else %}
+    <div class="col-span-full text-center py-8">
+        <p class="text-gray-500 mb-4">No branches found.</p>
+        {% if can_edit_delete %}
+        <button onclick="document.getElementById('addBranchModal').classList.remove('hidden')" 
+                class="bg-teal-600 text-white px-6 py-3 rounded-lg hover:bg-teal-700">
+            <i class="fas fa-plus mr-2"></i>Add Your First Branch
+        </button>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+
+<div class="mt-8 bg-white rounded-xl shadow p-6">
+    <h3 class="text-lg font-bold text-teal-800 mb-4">How to Get GPS Coordinates</h3>
+    <ol class="list-decimal list-inside space-y-2 text-gray-700">
+        <li>Open Google Maps on your phone or computer</li>
+        <li>Navigate to your branch location</li>
+        <li>Right-click (or long-press on mobile) on the exact location</li>
+        <li>Copy the coordinates that appear (e.g., 14.5995, 120.9842)</li>
+        <li>Enter the first number as Latitude, second as Longitude</li>
+    </ol>
+</div>
+
+<div id="deleteBranchModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-xl p-8 w-full max-w-md">
+        <h2 class="text-2xl font-bold text-red-600 mb-4"><i class="fas fa-exclamation-triangle mr-2"></i>Delete Branch</h2>
+        <p class="text-gray-700 mb-4">Are you sure you want to delete branch "<span id="deleteBranchName" class="font-bold"></span>"?</p>
+        <p class="text-sm text-gray-500 mb-4">This action cannot be undone. Branches with employees cannot be deleted.</p>
+        <form method="POST" id="deleteBranchForm">
+            <div class="mb-4">
+                <label class="block text-gray-700 font-medium mb-1">Enter your password to confirm</label>
+                <input type="password" name="password" required class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-red-500">
+            </div>
+            <div class="flex justify-end space-x-4">
+                <button type="button" onclick="document.getElementById('deleteBranchModal').classList.add('hidden')" 
+                        class="px-6 py-2 border rounded-lg hover:bg-gray-100">Cancel</button>
+                <button type="submit" class="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">Delete</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="addBranchModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-xl p-8 w-full max-w-md">
+        <h2 class="text-2xl font-bold text-teal-800 mb-6"><i class="fas fa-building mr-2"></i>Add New Branch</h2>
+        <form action="/admin/branches/add" method="POST">
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Branch Name *</label>
+                    <input type="text" name="name" required 
+                           class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500"
+                           placeholder="e.g., Main Branch">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                    <input type="text" name="address" 
+                           class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500"
+                           placeholder="e.g., 123 Main St, City">
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end space-x-4">
+                <button type="button" onclick="document.getElementById('addBranchModal').classList.add('hidden')" 
+                        class="px-6 py-2 border rounded-lg hover:bg-gray-100">Cancel</button>
+                <button type="submit" class="px-6 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700">
+                    <i class="fas fa-plus mr-2"></i>Add Branch
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function confirmDeleteBranch(id, name) {
+    document.getElementById('deleteBranchForm').action = '/admin/branches/' + id + '/delete';
+    document.getElementById('deleteBranchName').textContent = name;
+    document.getElementById('deleteBranchModal').classList.remove('hidden');
+}
+</script>
+{% endblock %}

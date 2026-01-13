@@ -1,0 +1,109 @@
+{% extends 'admin/base_admin.html' %}
+
+{% block title %}{{ period.name }} - Payroll{% endblock %}
+
+{% block admin_content %}
+<div class="flex justify-between items-center mb-8">
+    <div>
+        <a href="/admin/payroll" class="text-teal-600 hover:text-teal-800 text-sm">
+            <i class="fas fa-arrow-left mr-1"></i>Back to Payroll
+        </a>
+        <h1 class="text-3xl font-bold text-teal-800 mt-2">{{ period.name }}</h1>
+        <p class="text-gray-500">{{ period.start_date }} to {{ period.end_date }}</p>
+    </div>
+    <div class="space-x-2">
+        {% if not period.is_locked %}
+        <form action="/admin/payroll/{{ period.id }}/regenerate" method="POST" class="inline">
+            <button type="submit" class="bg-lime-400 text-teal-800 px-4 py-2 rounded-lg hover:bg-lime-500">
+                <i class="fas fa-sync mr-2"></i>Regenerate
+            </button>
+        </form>
+        <form action="/admin/payroll/{{ period.id }}/lock" method="POST" class="inline">
+            <button type="submit" class="bg-coral-300 text-white px-4 py-2 rounded-lg hover:bg-coral-400" onclick="return confirm('Are you sure? This will lock the payroll period and rates.')">
+                <i class="fas fa-lock mr-2"></i>Lock Period
+            </button>
+        </form>
+        {% else %}
+        <span class="bg-coral-100 text-coral-300 px-4 py-2 rounded-lg">
+            <i class="fas fa-lock mr-2"></i>Locked
+        </span>
+        {% endif %}
+    </div>
+</div>
+
+<div class="bg-white rounded-xl shadow overflow-x-auto">
+    <table class="w-full text-sm">
+        <thead class="bg-gray-50">
+            <tr>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Employee</th>
+                <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Daily Rate</th>
+                <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Days</th>
+                <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Regular Pay</th>
+                <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">OT Pay</th>
+                <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Holiday Pay</th>
+                <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Tardiness</th>
+                <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Undertime</th>
+                <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Gross Pay</th>
+                <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Deductions</th>
+                <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Net Pay</th>
+                <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Actions</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200">
+            {% for item in records %}
+            {% set rec = item.record %}
+            <tr>
+                <td class="px-4 py-4">
+                    <div class="font-medium text-gray-900">{{ rec.first_name }} {{ rec.last_name }}</div>
+                    <div class="text-gray-500 text-xs">{{ rec.emp_code }}</div>
+                </td>
+                <td class="px-4 py-4 text-right text-gray-900">₱{{ "%.2f"|format(rec.locked_daily_rate) }}</td>
+                <td class="px-4 py-4 text-right text-gray-900">{{ rec.days_worked }}</td>
+                <td class="px-4 py-4 text-right text-gray-900">₱{{ "%.2f"|format(rec.regular_pay) }}</td>
+                <td class="px-4 py-4 text-right text-teal-600">₱{{ "%.2f"|format(rec.overtime_pay) }}</td>
+                <td class="px-4 py-4 text-right text-lime-600">₱{{ "%.2f"|format(rec.holiday_pay) }}</td>
+                <td class="px-4 py-4 text-right text-coral-300">-₱{{ "%.2f"|format(rec.tardiness_deduction) }}</td>
+                <td class="px-4 py-4 text-right text-orange-600">-₱{{ "%.2f"|format(rec.undertime_deduction) }}</td>
+                <td class="px-4 py-4 text-right font-medium text-gray-900">₱{{ "%.2f"|format(rec.gross_pay) }}</td>
+                <td class="px-4 py-4 text-right">
+                    <div class="text-coral-300">-₱{{ "%.2f"|format(rec.total_deductions) }}</div>
+                    <div class="text-xs text-gray-500 mt-1">
+                        {% for ded in item.deductions %}
+                        {{ ded.deduction_name }}: ₱{{ "%.2f"|format(ded.employee_amount) }}<br>
+                        {% endfor %}
+                    </div>
+                </td>
+                <td class="px-4 py-4 text-right font-bold text-lg text-teal-700">₱{{ "%.2f"|format(rec.net_pay) }}</td>
+                <td class="px-4 py-4 text-center">
+                    <a href="/admin/payroll/record/{{ rec.id }}/pdf" class="inline-flex items-center px-3 py-1.5 bg-teal-600 text-white text-xs font-medium rounded-lg hover:bg-teal-700 transition-colors" title="Download PDF Payslip">
+                        <i class="fas fa-file-pdf mr-1"></i>PDF
+                    </a>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="12" class="px-4 py-8 text-center text-gray-500">No payroll records</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        {% if records %}
+        <tfoot class="bg-gray-100">
+            <tr class="font-bold">
+                <td class="px-4 py-4">TOTAL</td>
+                <td class="px-4 py-4"></td>
+                <td class="px-4 py-4 text-right">{{ records|sum(attribute='record.days_worked') }}</td>
+                <td class="px-4 py-4 text-right">₱{{ "%.2f"|format(records|sum(attribute='record.regular_pay')) }}</td>
+                <td class="px-4 py-4 text-right text-teal-600">₱{{ "%.2f"|format(records|sum(attribute='record.overtime_pay')) }}</td>
+                <td class="px-4 py-4 text-right text-lime-600">₱{{ "%.2f"|format(records|sum(attribute='record.holiday_pay')) }}</td>
+                <td class="px-4 py-4 text-right text-coral-300">-₱{{ "%.2f"|format(records|sum(attribute='record.tardiness_deduction')) }}</td>
+                <td class="px-4 py-4 text-right text-orange-600">-₱{{ "%.2f"|format(records|sum(attribute='record.undertime_deduction')) }}</td>
+                <td class="px-4 py-4 text-right">₱{{ "%.2f"|format(records|sum(attribute='record.gross_pay')) }}</td>
+                <td class="px-4 py-4 text-right text-coral-300">-₱{{ "%.2f"|format(records|sum(attribute='record.total_deductions')) }}</td>
+                <td class="px-4 py-4 text-right text-teal-700">₱{{ "%.2f"|format(records|sum(attribute='record.net_pay')) }}</td>
+                <td class="px-4 py-4"></td>
+            </tr>
+        </tfoot>
+        {% endif %}
+    </table>
+</div>
+{% endblock %}

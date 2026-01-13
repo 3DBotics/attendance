@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+
+{% block title %}3DBotics - Attendance & Payroll System{% endblock %}
+
+{% block content %}
+<div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-teal-700 to-teal-900">
+    <div class="text-center">
+        <div class="logo-badge h-40 w-40 mx-auto mb-4">
+            <img src="/static/logo.png" alt="3DBotics" class="h-24">
+        </div>
+        <p class="text-xl text-teal-100 mb-12">Branch Attendance & Payroll Management System</p>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-2xl mx-auto px-4">
+            <a href="/tablet" class="bg-white rounded-2xl p-8 shadow-2xl hover:shadow-3xl transform hover:scale-105 transition-all duration-300">
+                <div class="text-teal-600 mb-4">
+                    <i class="fas fa-tablet-alt text-6xl"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-teal-800 mb-2">Tablet Station</h2>
+                <p class="text-gray-600">Time-In / Time-Out with selfie verification</p>
+            </a>
+            
+            <a href="/admin" class="bg-white rounded-2xl p-8 shadow-2xl hover:shadow-3xl transform hover:scale-105 transition-all duration-300">
+                <div class="text-coral-300 mb-4">
+                    <i class="fas fa-user-shield text-6xl"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-teal-800 mb-2">Admin Panel</h2>
+                <p class="text-gray-600">Manage employees, payroll & settings</p>
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
