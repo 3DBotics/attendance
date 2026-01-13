@@ -326,7 +326,7 @@ class Employee:
                 SELECT e.*, b.name as branch_name 
                 FROM employees e 
                 LEFT JOIN branches b ON e.branch_id = b.id
-                WHERE e.is_resigned = 0
+                WHERE e.is_resigned = FALSE
                 ORDER BY e.last_name, e.first_name
             ''')
         employees = cursor.fetchall()
@@ -350,7 +350,7 @@ class Employee:
             SELECT e.*, b.name as branch_name 
             FROM employees e 
             LEFT JOIN branches b ON e.branch_id = b.id
-            WHERE e.is_active = 1 AND e.is_resigned = 0
+            WHERE e.is_active = TRUE AND e.is_resigned = FALSE
             ORDER BY e.last_name, e.first_name
         ''')
         employees = cursor.fetchall()
@@ -406,8 +406,8 @@ class Employee:
     def change_status(emp_id, status, reason=None):
         conn = get_db()
         cursor = get_cursor(conn)
-        is_active = 1 if status == 'active' else 0
-        is_resigned = 1 if status in ['resigned', 'terminated', 'others'] else 0
+        is_active = True if status == 'active' else False
+        is_resigned = True if status in ['resigned', 'terminated', 'others'] else False
         cursor.execute('''
             UPDATE employees 
             SET status = %s, status_reason = %s, status_date = %s, 
@@ -423,7 +423,7 @@ class Employee:
         cursor = get_cursor(conn)
         cursor.execute('''
             UPDATE employees 
-            SET is_resigned = 1, is_active = 0, resigned_date = %s, status = 'resigned', updated_at = CURRENT_TIMESTAMP
+            SET is_resigned = TRUE, is_active = FALSE, resigned_date = %s, status = 'resigned', updated_at = CURRENT_TIMESTAMP
             WHERE id = %s
         ''', (date.today().isoformat(), emp_id))
         conn.commit()
@@ -689,7 +689,7 @@ class AdminAuthCode:
         today = date.today().isoformat()
         cursor.execute('''
             SELECT * FROM admin_auth_codes 
-            WHERE code_type = %s AND is_active = 1 
+            WHERE code_type = %s AND is_active = TRUE 
             AND (valid_until IS NULL OR valid_until >= %s)
             AND (uses_remaining = -1 OR uses_remaining > 0)
         ''', (code_type, today))
@@ -704,7 +704,7 @@ class AdminAuthCode:
         today = date.today().isoformat()
         cursor.execute('''
             SELECT * FROM admin_auth_codes 
-            WHERE code = %s AND code_type = %s AND is_active = 1 
+            WHERE code = %s AND code_type = %s AND is_active = TRUE 
             AND (valid_until IS NULL OR valid_until >= %s)
             AND (uses_remaining = -1 OR uses_remaining > 0)
         ''', (code, code_type, today))
@@ -759,7 +759,7 @@ class StatutoryDeduction:
     def get_active():
         conn = get_db()
         cursor = get_cursor(conn)
-        cursor.execute('SELECT * FROM statutory_deductions WHERE is_active = 1 ORDER BY name')
+        cursor.execute('SELECT * FROM statutory_deductions WHERE is_active = TRUE ORDER BY name')
         deductions = cursor.fetchall()
         conn.close()
         return deductions
@@ -1278,7 +1278,7 @@ class Admin:
     def get_by_username(username):
         conn = get_db()
         cursor = get_cursor(conn)
-        cursor.execute('SELECT * FROM admins WHERE username = %s AND is_active = 1', (username,))
+        cursor.execute('SELECT * FROM admins WHERE username = %s AND is_active = TRUE', (username,))
         admin = cursor.fetchone()
         conn.close()
         return admin
