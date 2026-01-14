@@ -458,7 +458,9 @@ class Attendance:
         
         cursor.execute('SELECT start_time, end_time FROM employees WHERE id = %s', (employee_id,))
         emp_schedule = cursor.fetchone()
-        work_start = emp_schedule['start_time'] if emp_schedule and emp_schedule['start_time'] else '08:00'
+        work_start_raw = emp_schedule['start_time'] if emp_schedule and emp_schedule['start_time'] else '08:00'
+        # Handle TIME type from database (could be time object, string with seconds, or HH:MM)
+        work_start = str(work_start_raw)[:5] if work_start_raw else '08:00'
         
         tardiness_minutes = 0
         early_start_minutes = 0
@@ -529,7 +531,9 @@ class Attendance:
         
         cursor.execute('SELECT end_time FROM employees WHERE id = %s', (employee_id,))
         emp_schedule = cursor.fetchone()
-        work_end = emp_schedule['end_time'] if emp_schedule and emp_schedule['end_time'] else '17:00'
+        work_end_raw = emp_schedule['end_time'] if emp_schedule and emp_schedule['end_time'] else '17:00'
+        # Handle TIME type from database
+        work_end = str(work_end_raw)[:5] if work_end_raw else '17:00'
         
         undertime_minutes = 0
         official_overtime_minutes = 0
@@ -542,7 +546,9 @@ class Attendance:
         if purpose == 'clock_out' or purpose == 'unapproved_undertime_out':
             cursor.execute('SELECT start_time FROM employees WHERE id = %s', (employee_id,))
             start_schedule = cursor.fetchone()
-            work_start = start_schedule['start_time'] if start_schedule and start_schedule['start_time'] else '08:00'
+            work_start_raw = start_schedule['start_time'] if start_schedule and start_schedule['start_time'] else '08:00'
+            # Handle TIME type from database
+            work_start = str(work_start_raw)[:5] if work_start_raw else '08:00'
             
             work_end_time = datetime.strptime(f"{record_date} {work_end}", "%Y-%m-%d %H:%M")
             work_end_time = MANILA_TZ.localize(work_end_time)
@@ -1295,8 +1301,13 @@ class Admin:
     @staticmethod
     def verify_password(username, password):
         admin = Admin.get_by_username(username)
-        if admin and check_password_hash(admin['password_hash'], password):
-            return admin
+        if admin:
+            try:
+                if admin.get('password_hash') and check_password_hash(admin['password_hash'], password):
+                    return admin
+            except Exception:
+                # Invalid password hash format
+                pass
         return None
     
     @staticmethod
