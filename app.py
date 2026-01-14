@@ -19,6 +19,36 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 init_db()
 
+# Auto-repair corrupted database on startup
+try:
+    from werkzeug.security import generate_password_hash
+    conn = get_db()
+    cursor = get_cursor(conn)
+    
+    # Fix admin password
+    cursor.execute("SELECT id, username, password_hash FROM admins WHERE username = 'admin'")
+    admin = cursor.fetchone()
+    if admin and (not admin.get('password_hash') or len(admin.get('password_hash', '')) < 10):
+        new_hash = generate_password_hash('admin123')
+        cursor.execute("UPDATE admins SET password_hash = %s WHERE username = 'admin'", (new_hash,))
+        print("✅ Auto-fixed admin password")
+    
+    # Fix time formats
+    cursor.execute("SELECT id, start_time, end_time FROM employees")
+    for emp in cursor.fetchall():
+        if emp['start_time'] and len(emp['start_time'].split(':')) == 3:
+            new_start = ':'.join(emp['start_time'].split(':')[:2])
+            cursor.execute("UPDATE employees SET start_time = %s WHERE id = %s", (new_start, emp['id']))
+        if emp['end_time'] and len(emp['end_time'].split(':')) == 3:
+            new_end = ':'.join(emp['end_time'].split(':')[:2])
+            cursor.execute("UPDATE employees SET end_time = %s WHERE id = %s", (new_end, emp['id']))
+    
+    conn.commit()
+    conn.close()
+    print("✅ Database auto-repair completed")
+except Exception as e:
+    print(f"⚠️  Database auto-repair failed: {e}")
+
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
