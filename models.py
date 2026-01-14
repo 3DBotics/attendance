@@ -37,9 +37,8 @@ def get_cursor(conn):
 
 def init_db():
     conn = get_db()
-    conn.autocommit = True  # Prevent transaction issues
+    conn.autocommit = True  # Keep autocommit ON to prevent transaction issues
     cursor = get_cursor(conn)
-    conn.autocommit = False  # Back to normal mode
     
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS branches (
@@ -270,8 +269,7 @@ def init_db():
         cursor.execute("INSERT INTO statutory_deductions (name, is_percentage, employee_rate, employer_rate) VALUES (%s, %s, %s, %s)", ('PhilHealth', 1, 2.5, 2.5))
         cursor.execute("INSERT INTO statutory_deductions (name, is_percentage, employee_rate, employer_rate) VALUES (%s, %s, %s, %s)", ('Pag-IBIG', 0, 100, 100))
     
-    conn.commit()
-    conn.close()
+    conn.close()  # No commit needed - autocommit is True
 
 class Employee:
     @staticmethod
