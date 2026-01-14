@@ -37,7 +37,9 @@ def get_cursor(conn):
 
 def init_db():
     conn = get_db()
+    conn.autocommit = True  # Prevent transaction issues
     cursor = get_cursor(conn)
+    conn.autocommit = False  # Back to normal mode
     
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS branches (
