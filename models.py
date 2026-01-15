@@ -464,7 +464,7 @@ class Attendance:
         
         tardiness_minutes = 0
         early_start_minutes = 0
-        is_early_start_approved = 0
+        is_early_start_approved = False
         
         if purpose == 'clock_in':
             cursor.execute("SELECT value FROM settings WHERE key = 'grace_period'")
@@ -491,11 +491,11 @@ class Attendance:
                 diff = work_start_time - now
                 early_start_minutes = int(diff.total_seconds() / 60)
                 if early_start_approved:
-                    is_early_start_approved = 1
+                    is_early_start_approved = True
         
         cursor.execute("SELECT date FROM holidays WHERE date = %s", (today,))
         holiday = cursor.fetchone()
-        is_holiday = 1 if holiday else 0
+        is_holiday = True if holiday else False
         holiday_type = None
         if holiday:
             cursor.execute("SELECT type FROM holidays WHERE date = %s", (today,))
@@ -537,8 +537,8 @@ class Attendance:
         
         undertime_minutes = 0
         official_overtime_minutes = 0
-        is_official_overtime_approved = 0
-        requires_admin_review = 0
+        is_official_overtime_approved = False
+        requires_admin_review = False
         admin_review_reason = None
         
         clock_out_date = now.strftime('%Y-%m-%d')
@@ -561,13 +561,13 @@ class Attendance:
                 work_end_time = work_end_time + timedelta(days=1)
             
             if clock_out_date > record_date and not official_overtime_approved and not is_night_shift:
-                requires_admin_review = 1
+                requires_admin_review = True
                 admin_review_reason = "Next-day clock-out without overtime approval"
             elif now >= work_end_time:
                 if official_overtime_approved:
                     diff = now - work_end_time
                     official_overtime_minutes = int(diff.total_seconds() / 60)
-                    is_official_overtime_approved = 1
+                    is_official_overtime_approved = True
             else:
                 diff = work_end_time - now
                 undertime_minutes = int(diff.total_seconds() / 60)
