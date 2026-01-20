@@ -60,7 +60,7 @@
                         <i class="fas fa-edit"></i>
                     </button>
                     {% set current_status = emp.status or ('resigned' if emp.is_resigned else 'active') %}
-                    {% if current_status == 'active' %}
+                    {% if current_status == 'active' and can_edit_delete %}
                     <button onclick="openStatusChange({{ emp.id }}, '{{ emp.first_name }} {{ emp.last_name }}')" class="text-coral-300 hover:text-coral-500" title="Change Status">
                         <i class="fas fa-user-times"></i>
                     </button>
@@ -584,6 +584,7 @@ function capturePhoto(prefix) {
     const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
     capturedImg.src = dataUrl;
     photoData.value = dataUrl;
+    console.log("Photo captured, data length:", dataUrl.length);
     
     if (cameraStreams[prefix]) {
         cameraStreams[prefix].getTracks().forEach(track => track.stop());

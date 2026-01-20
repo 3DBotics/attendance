@@ -42,6 +42,18 @@ def master_admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+def staff_access_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'admin_id' not in session:
+            flash('Please login to access this page', 'error')
+            return redirect(url_for('admin_login'))
+        if session.get('admin_role') not in ['master_admin', 'staff']:
+            flash('Access denied. Staff or Master Admin privileges required.', 'error')
+            return redirect(url_for('admin_dashboard'))
+        return f(*args, **kwargs)
+    return decorated_function
+
 def get_current_admin():
     if 'admin_id' in session:
         return Admin.get_by_id(session['admin_id'])
@@ -122,8 +134,6 @@ def validate_and_save_id_photo(photo_data, employee_id):
         img = img.convert('RGB')
         max_size = (400, 400)
         img.thumbnail(max_size, Image.Resampling.LANCZOS)
-        img.save(photo_path, 'JPEG', quality=70, optimize=True)
-        
         # Return base64 string instead of path to ensure persistence on Railway
         buffered = BytesIO()
         img.save(buffered, format="JPEG", quality=70)
@@ -160,13 +170,13 @@ def validate_and_save_cv(cv_file, employee_id):
     return cv_path
 
 @app.route('/admin/employees/add', methods=['POST'])
-@master_admin_required
+@staff_access_required
 def add_employee():
     data = request.form
     start_time = data.get('start_time', '08:00')
     end_time = data.get('end_time', '17:00')
     
-    id_photo_path = validate_and_save_id_photo(data.get('id_photo_data'), data['employee_id'])
+    id_photo_path = validate_and_save_id_photo(data.get('id_photo'), data['employee_id'])
     cv_file_path = validate_and_save_cv(request.files.get('cv_file'), data['employee_id'])
     
     result = Employee.create(
@@ -207,14 +217,14 @@ def add_employee():
     return redirect(url_for('admin_employees'))
 
 @app.route('/admin/employees/<int:emp_id>/edit', methods=['POST'])
-@master_admin_required
+@staff_access_required
 def edit_employee(emp_id):
     data = request.form
     pin = data.get('pin') if data.get('pin') else None
     start_time = data.get('start_time', '08:00')
     end_time = data.get('end_time', '17:00')
     
-    id_photo_path = validate_and_save_id_photo(data.get('id_photo_data'), data['employee_id'])
+    id_photo_path = validate_and_save_id_photo(data.get('id_photo'), data['employee_id'])
     cv_file_path = validate_and_save_cv(request.files.get('cv_file'), data['employee_id'])
     
     Employee.update(
