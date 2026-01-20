@@ -126,7 +126,9 @@ def init_db():
     
     try:
         cursor.execute("ALTER TABLE attendance ADD COLUMN IF NOT EXISTS requires_admin_review INTEGER DEFAULT 0")
-        cursor.execute("ALTER TABLE attendance ADD COLUMN IF NOT EXISTS admin_review_reason TEXT")
+            cursor.execute("ALTER TABLE attendance ADD COLUMN IF NOT EXISTS admin_review_reason TEXT")
+        cursor.execute("ALTER TABLE attendance ADD COLUMN IF NOT EXISTS is_remote_field INTEGER DEFAULT 0")
+        cursor.execute("ALTER TABLE attendance ADD COLUMN IF NOT EXISTS remote_field_hours REAL DEFAULT 0")
     except:
         pass
     
@@ -235,7 +237,8 @@ def init_db():
         CREATE TABLE IF NOT EXISTS admin_auth_codes (
             id SERIAL PRIMARY KEY,
             code TEXT NOT NULL UNIQUE,
-            code_type TEXT NOT NULL CHECK(code_type IN ('early_start', 'overtime')),
+            code_type TEXT NOT NULL CHECK(code_type IN ('early_start', 'overtime', 'remote_field')),
+            allowable_hours REAL DEFAULT 0,
             description TEXT,
             is_active INTEGER DEFAULT 1,
             uses_remaining INTEGER DEFAULT -1,
@@ -442,7 +445,7 @@ class Employee:
 
 class Attendance:
     @staticmethod
-    def time_in(employee_id, photo_path, purpose='clock_in', early_start_approved=False, early_start_code=None):
+    def time_in(employee_id, photo_path, purpose='clock_in', early_start_approved=False, early_start_code=None, is_remote_field=False, remote_field_hours=0):
         conn = get_db()
         cursor = get_cursor(conn)
         manila_now = get_manila_now()
@@ -502,10 +505,10 @@ class Attendance:
             holiday_type = cursor.fetchone()['type']
         
         cursor.execute('''
-            INSERT INTO attendance (employee_id, date, time_in, time_in_photo, time_in_purpose, tardiness_minutes, is_holiday, holiday_type, early_start_approved, early_start_minutes)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO attendance (employee_id, date, time_in, time_in_photo, time_in_purpose, tardiness_minutes, is_holiday, holiday_type, early_start_approved, early_start_minutes, is_remote_field, remote_field_hours)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING id
-        ''', (employee_id, today, now.isoformat(), photo_path, purpose, tardiness_minutes, is_holiday, holiday_type, is_early_start_approved, early_start_minutes))
+        ''', (employee_id, today, now.isoformat(), photo_path, purpose, tardiness_minutes, is_holiday, holiday_type, is_early_start_approved, early_start_minutes, 1 if is_remote_field else 0, remote_field_hours))
         result = cursor.fetchone()
         conn.commit()
         record_id = result['id']
@@ -656,15 +659,15 @@ class Attendance:
 
 class AdminAuthCode:
     @staticmethod
-    def create(code, code_type, description=None, uses_remaining=-1, valid_until=None, created_by=None):
+    def create(code, code_type, description=None, uses_remaining=-1, valid_until=None, created_by=None, allowable_hours=0):
         conn = get_db()
         cursor = get_cursor(conn)
         try:
             cursor.execute('''
-                INSERT INTO admin_auth_codes (code, code_type, description, uses_remaining, valid_until, created_by)
-                VALUES (%s, %s, %s, %s, %s, %s)
+                INSERT INTO admin_auth_codes (code, code_type, description, uses_remaining, valid_until, created_by, allowable_hours)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
                 RETURNING id
-            ''', (code, code_type, description, uses_remaining, valid_until, created_by))
+            ''', (code, code_type, description, uses_remaining, valid_until, created_by, allowable_hours))
             result = cursor.fetchone()
             conn.commit()
             conn.close()
@@ -726,14 +729,21 @@ class AdminAuthCode:
         return False
     
     @staticmethod
-    def update(code_id, code, description, is_active, uses_remaining, valid_until):
+    def update(code_id, code, description, is_active, uses_remaining, valid_until, allowable_hours=None):
         conn = get_db()
         cursor = get_cursor(conn)
-        cursor.execute('''
-            UPDATE admin_auth_codes 
-            SET code = %s, description = %s, is_active = %s, uses_remaining = %s, valid_until = %s
-            WHERE id = %s
-        ''', (code, description, is_active, uses_remaining, valid_until, code_id))
+        if allowable_hours is not None:
+            cursor.execute('''
+                UPDATE admin_auth_codes 
+                SET code = %s, description = %s, is_active = %s, uses_remaining = %s, valid_until = %s, allowable_hours = %s
+                WHERE id = %s
+            ''', (code, description, is_active, uses_remaining, valid_until, allowable_hours, code_id))
+        else:
+            cursor.execute('''
+                UPDATE admin_auth_codes 
+                SET code = %s, description = %s, is_active = %s, uses_remaining = %s, valid_until = %s
+                WHERE id = %s
+            ''', (code, description, is_active, uses_remaining, valid_until, code_id))
         conn.commit()
         conn.close()
     

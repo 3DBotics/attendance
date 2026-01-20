@@ -707,8 +707,9 @@ def add_auth_code():
     description = data.get('description', '')
     uses_remaining = int(data.get('uses_remaining', -1))
     valid_until = data.get('valid_until') or None
+    allowable_hours = float(data.get('allowable_hours', 0))
     
-    result = AdminAuthCode.create(code, code_type, description, uses_remaining, valid_until, session['admin_id'])
+    result = AdminAuthCode.create(code, code_type, description, uses_remaining, valid_until, session['admin_id'], allowable_hours=allowable_hours)
     if result:
         ActivityLog.log(session['admin_id'], session['admin_name'], 'CREATE', 'auth_code', result, f"Created {code_type} auth code: {code}", request.remote_addr)
         flash(f'Authorization code created: {code}', 'success')
@@ -723,8 +724,9 @@ def edit_auth_code(code_id):
     is_active = 1 if data.get('is_active') else 0
     uses_remaining = int(data.get('uses_remaining', -1))
     valid_until = data.get('valid_until') or None
+    allowable_hours = float(data.get('allowable_hours', 0))
     
-    AdminAuthCode.update(code_id, data['code'], data.get('description', ''), is_active, uses_remaining, valid_until)
+    AdminAuthCode.update(code_id, data['code'], data.get('description', ''), is_active, uses_remaining, valid_until, allowable_hours=allowable_hours)
     ActivityLog.log(session['admin_id'], session['admin_name'], 'UPDATE', 'auth_code', code_id, 'Updated auth code', request.remote_addr)
     flash('Authorization code updated', 'success')
     return redirect(url_for('admin_auth_codes'))
@@ -789,6 +791,8 @@ def record_attendance():
     photo_data = data.get('photo')
     early_start_approved = data.get('early_start_approved', False)
     official_overtime_approved = data.get('official_overtime_approved', False)
+    is_remote_field = data.get('is_remote_field', False)
+    remote_field_hours = data.get('remote_field_hours', 0)
     
     if photo_data:
         photo_data = photo_data.split(',')[1]
@@ -809,7 +813,7 @@ def record_attendance():
         photo_path = None
     
     if action == 'time_in':
-        record_id, message = Attendance.time_in(employee_id, photo_path, purpose, early_start_approved)
+        record_id, message = Attendance.time_in(employee_id, photo_path, purpose, early_start_approved, is_remote_field=is_remote_field, remote_field_hours=remote_field_hours)
     else:
         record_id, message = Attendance.time_out(employee_id, photo_path, purpose, official_overtime_approved)
     
@@ -823,8 +827,31 @@ def verify_auth_code():
     code = data.get('code')
     code_type = data.get('code_type')
     
-    if AdminAuthCode.verify_code(code, code_type):
-        return jsonify({'success': True, 'message': 'Code verified successfully'})
+    conn = get_db()
+    cursor = get_cursor(conn)
+    today = date.today().isoformat()
+    cursor.execute('''
+        SELECT * FROM admin_auth_codes 
+        WHERE code = %s AND code_type = %s AND is_active = TRUE 
+        AND (valid_until IS NULL OR valid_until >= %s)
+        AND (uses_remaining = -1 OR uses_remaining > 0)
+    ''', (code, code_type, today))
+    auth_code = cursor.fetchone()
+    
+    if auth_code:
+        if auth_code['uses_remaining'] > 0:
+            cursor.execute('UPDATE admin_auth_codes SET uses_remaining = uses_remaining - 1 WHERE id = %s', (auth_code['id'],))
+            conn.commit()
+        
+        allowable_hours = auth_code.get('allowable_hours', 0)
+        conn.close()
+        return jsonify({
+            'success': True, 
+            'message': 'Code verified successfully',
+            'allowable_hours': allowable_hours
+        })
+    
+    conn.close()
     return jsonify({'success': False, 'message': 'Invalid or expired code'})
 
 @app.route('/api/employees')

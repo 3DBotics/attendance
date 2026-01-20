@@ -21,6 +21,10 @@
             <h3 class="font-bold text-orange-800 mb-2"><i class="fas fa-moon mr-2"></i>Overtime Codes</h3>
             <p>Used when an employee needs to work beyond their scheduled end time. Overtime is paid at 1.25x (DOLE standard rate).</p>
         </div>
+        <div class="bg-blue-50 p-4 rounded-lg">
+            <h3 class="font-bold text-blue-800 mb-2"><i class="fas fa-house-laptop mr-2"></i>Remote/Field Codes</h3>
+            <p>Used for Work From Home or Field assignments. Bypasses GPS geofencing and allows specific work hours.</p>
+        </div>
     </div>
 </div>
 
@@ -43,8 +47,8 @@
             <tr>
                 <td class="px-6 py-4 text-sm font-mono font-bold text-gray-900">{{ code.code }}</td>
                 <td class="px-6 py-4 text-sm">
-                    <span class="px-2 py-1 text-xs rounded-full {% if code.code_type == 'early_start' %}bg-teal-100 text-teal-700{% else %}bg-orange-100 text-orange-700{% endif %}">
-                        {% if code.code_type == 'early_start' %}Early Start{% else %}Overtime{% endif %}
+                    <span class="px-2 py-1 text-xs rounded-full {% if code.code_type == 'early_start' %}bg-teal-100 text-teal-700{% elif code.code_type == 'overtime' %}bg-orange-100 text-orange-700{% else %}bg-blue-100 text-blue-700{% endif %}">
+                        {% if code.code_type == 'early_start' %}Early Start{% elif code.code_type == 'overtime' %}Overtime{% else %}Remote/Field{% endif %}
                     </span>
                 </td>
                 <td class="px-6 py-4 text-sm text-gray-600">{{ code.description or '-' }}</td>
@@ -59,7 +63,7 @@
                 </td>
                 <td class="px-6 py-4 text-sm text-gray-600">{{ code.created_by_name or 'System' }}</td>
                 <td class="px-6 py-4 text-sm space-x-2">
-                    <button onclick="editCode({{ code.id }}, '{{ code.code }}', '{{ code.code_type }}', '{{ code.description or '' }}', {{ code.uses_remaining }}, '{{ code.valid_until or '' }}', {{ code.is_active }})" class="text-teal-600 hover:text-teal-800">
+                    <button onclick="editCode({{ code.id }}, '{{ code.code }}', '{{ code.code_type }}', '{{ code.description or '' }}', {{ code.uses_remaining }}, '{{ code.valid_until or '' }}', {{ code.is_active }}, {{ code.allowable_hours or 0 }})" class="text-teal-600 hover:text-teal-800">
                         <i class="fas fa-edit"></i>
                     </button>
                     <button onclick="confirmDelete({{ code.id }})" class="text-red-600 hover:text-red-800">
@@ -83,10 +87,15 @@
             <div class="space-y-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Code Type</label>
-                    <select name="code_type" required class="mt-1 w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500">
+                    <select name="code_type" id="new_code_type" required onchange="toggleAllowableHours('new')" class="mt-1 w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500">
                         <option value="early_start">Early Start (Before Shift)</option>
                         <option value="overtime">Overtime (After Shift)</option>
+                        <option value="remote_field">Remote/Field Work (WFH)</option>
                     </select>
+                </div>
+                <div id="new_allowable_hours_div" class="hidden">
+                    <label class="block text-sm font-medium text-gray-700">Allowable Hours</label>
+                    <input type="number" step="0.5" name="allowable_hours" value="8" class="mt-1 w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Code (Leave blank to auto-generate)</label>
@@ -133,7 +142,12 @@
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Type</label>
-                    <input type="text" id="edit_code_type" disabled class="mt-1 w-full px-3 py-2 border rounded-lg bg-gray-100">
+                    <input type="text" id="edit_code_type_display" disabled class="mt-1 w-full px-3 py-2 border rounded-lg bg-gray-100">
+                    <input type="hidden" name="code_type" id="edit_code_type">
+                </div>
+                <div id="edit_allowable_hours_div" class="hidden">
+                    <label class="block text-sm font-medium text-gray-700">Allowable Hours</label>
+                    <input type="number" step="0.5" name="allowable_hours" id="edit_allowable_hours" class="mt-1 w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Description</label>
@@ -191,14 +205,33 @@ async function generateCode() {
     }
 }
 
-function editCode(id, code, codeType, description, usesRemaining, validUntil, isActive) {
+function toggleAllowableHours(prefix) {
+    const typeSelect = document.getElementById(prefix === 'new' ? 'new_code_type' : 'edit_code_type');
+    const hoursDiv = document.getElementById(prefix === 'new' ? 'new_allowable_hours_div' : 'edit_allowable_hours_div');
+    if (typeSelect.value === 'remote_field') {
+        hoursDiv.classList.remove('hidden');
+    } else {
+        hoursDiv.classList.add('hidden');
+    }
+}
+
+function editCode(id, code, codeType, description, usesRemaining, validUntil, isActive, allowableHours) {
     document.getElementById('editCodeForm').action = '/admin/auth-codes/' + id + '/edit';
     document.getElementById('edit_code').value = code;
-    document.getElementById('edit_code_type').value = codeType === 'early_start' ? 'Early Start' : 'Overtime';
+    document.getElementById('edit_code_type').value = codeType;
+    
+    let typeDisplay = 'Early Start';
+    if (codeType === 'overtime') typeDisplay = 'Overtime';
+    if (codeType === 'remote_field') typeDisplay = 'Remote/Field';
+    document.getElementById('edit_code_type_display').value = typeDisplay;
+    
     document.getElementById('edit_description').value = description;
     document.getElementById('edit_uses').value = usesRemaining;
     document.getElementById('edit_valid_until').value = validUntil;
     document.getElementById('edit_is_active').checked = isActive == 1;
+    document.getElementById('edit_allowable_hours').value = allowableHours || 0;
+    
+    toggleAllowableHours('edit');
     document.getElementById('editCodeModal').classList.remove('hidden');
 }
 

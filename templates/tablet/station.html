@@ -79,6 +79,10 @@
                 <button onclick="selectPurpose('clock_in', 'time_in')" class="w-full p-5 text-xl font-bold bg-teal-500 hover:bg-teal-600 text-white rounded-xl transition-all">
                     <i class="fas fa-sign-in-alt mr-3"></i>Clock In
                 </button>
+                <button onclick="showRemoteFieldModal()" class="w-full p-5 text-xl font-bold bg-blue-500 hover:bg-blue-600 text-white rounded-xl transition-all">
+                    <i class="fas fa-house-laptop mr-3"></i>Official Remote/Field
+                    <span class="block text-sm font-normal mt-1">(WFH/Field - Requires Admin Auth Code)</span>
+                </button>
                 <button onclick="showEarlyStartModal()" class="w-full p-5 text-xl font-bold bg-amber-500 hover:bg-amber-600 text-white rounded-xl transition-all">
                     <i class="fas fa-sun mr-3"></i>Official Early Start
                     <span class="block text-sm font-normal mt-1">(Requires Admin Auth Code)</span>
@@ -196,11 +200,14 @@ let gpsError = false;
 let pendingAuthCodeType = '';
 let earlyStartApproved = false;
 let officialOvertimeApproved = false;
+let isRemoteField = false;
+let remoteFieldHours = 0;
 
 const PURPOSE_LABELS = {
     'clock_in': 'Clock In',
     'clock_out': 'Clock Out',
     'early_start': 'Official Early Start',
+    'remote_field': 'Official Remote/Field',
     'official_overtime': 'Official Overtime',
     'lunch_break_out': 'Lunch Break - Out',
     'lunch_break_in': 'Lunch Break - In',
@@ -434,6 +441,16 @@ function showOvertimeModal() {
     document.getElementById('authCodeInput').focus();
 }
 
+function showRemoteFieldModal() {
+    pendingAuthCodeType = 'remote_field';
+    document.getElementById('authCodeTitle').textContent = 'Remote/Field Authorization';
+    document.getElementById('authCodeDescription').textContent = 'Enter the admin authorization code for Work From Home or Field assignment. This will bypass GPS checks.';
+    document.getElementById('authCodeInput').value = '';
+    document.getElementById('authCodeError').classList.add('hidden');
+    document.getElementById('authCodeModal').classList.remove('hidden');
+    document.getElementById('authCodeInput').focus();
+}
+
 function closeAuthCodeModal() {
     document.getElementById('authCodeModal').classList.add('hidden');
     pendingAuthCodeType = '';
@@ -464,6 +481,11 @@ async function verifyAuthCode() {
             } else if (pendingAuthCodeType === 'overtime') {
                 officialOvertimeApproved = true;
                 selectPurpose('official_overtime', 'time_out');
+            } else if (pendingAuthCodeType === 'remote_field') {
+                isRemoteField = true;
+                remoteFieldHours = data.allowable_hours || 0;
+                isLocationValid = true; // Bypass GPS
+                selectPurpose('remote_field', 'time_in');
             }
         } else {
             document.getElementById('authCodeError').textContent = data.message || 'Invalid or expired code';
@@ -478,14 +500,16 @@ async function verifyAuthCode() {
 async function startGPS() {
     const gpsStatus = document.getElementById('gpsStatus');
     const previewLocation = document.getElementById('previewLocation');
-    
-    try {
+     try {
         await getGPSLocation();
         
         currentPlaceName = await reverseGeocode(currentPosition.lat, currentPosition.lng);
         
-        const validation = await validateLocation(selectedBranch, currentPosition.lat, currentPosition.lng);
-        isLocationValid = validation.valid;
+        if (isRemoteField) {
+            isLocationValid = true;
+        } else {
+            isLocationValid = (await validateLocation(selectedBranch, currentPosition.lat, currentPosition.lng)).valid;
+        }
         
         if (isLocationValid) {
             gpsStatus.textContent = `Location: ${currentPlaceName}`;
@@ -585,7 +609,9 @@ async function capturePhoto() {
                 is_location_valid: isLocationValid,
                 branch: selectedBranch,
                 early_start_approved: earlyStartApproved,
-                official_overtime_approved: officialOvertimeApproved
+                official_overtime_approved: officialOvertimeApproved,
+                is_remote_field: isRemoteField,
+                remote_field_hours: remoteFieldHours
             })
         });
         const data = await response.json();
@@ -628,6 +654,8 @@ function resetStation() {
     gpsError = false;
     earlyStartApproved = false;
     officialOvertimeApproved = false;
+    isRemoteField = false;
+    remoteFieldHours = 0;
     pendingAuthCodeType = '';
     
     document.getElementById('pinScreen').classList.add('hidden');
