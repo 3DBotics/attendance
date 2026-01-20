@@ -1353,7 +1353,18 @@ class Admin:
             conn.commit()
             conn.close()
             return result['id']
-        except psycopg2.IntegrityError:
+        except psycopg2.IntegrityError as e:
+            import traceback
+            print(f"IntegrityError in Admin.create: {str(e)}")
+            print(f"Username attempted: {username}")
+            print(traceback.format_exc())
+            conn.rollback()
+            conn.close()
+            return None
+        except Exception as e:
+            import traceback
+            print(f"Unexpected error in Admin.create: {str(e)}")
+            print(traceback.format_exc())
             conn.rollback()
             conn.close()
             return None
