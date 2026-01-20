@@ -266,17 +266,18 @@ def edit_employee(emp_id):
 @login_required
 def get_employee_json(emp_id):
     from flask import jsonify
-    emp = Employee.get_by_id(emp_id)
-    if not emp:
-        return jsonify({'error': 'Employee not found'}), 404
-    
-    conn = get_db()
-    cursor = get_cursor(conn)
-    cursor.execute('SELECT name FROM branches WHERE id = %s', (emp['branch_id'],))
-    branch = cursor.fetchone()
-    conn.close()
-    
-    return jsonify({
+    try:
+        emp = Employee.get_by_id(emp_id)
+        if not emp:
+            return jsonify({'error': 'Employee not found'}), 404
+        
+        conn = get_db()
+        cursor = get_cursor(conn)
+        cursor.execute('SELECT name FROM branches WHERE id = %s', (emp['branch_id'],))
+        branch = cursor.fetchone()
+        conn.close()
+        
+        return jsonify({
         'id': emp['id'],
         'employee_id': emp['employee_id'],
         'first_name': emp['first_name'],
@@ -310,6 +311,11 @@ def get_employee_json(emp_id):
         'date_hired': emp['date_hired'] if 'date_hired' in emp.keys() else None,
         'position': emp['position'] if 'position' in emp.keys() else None
     })
+    except Exception as e:
+        import traceback
+        print(f"Error in get_employee_json: {str(e)}")
+        print(traceback.format_exc())
+        return jsonify({'error': f'Internal server error: {str(e)}'}), 500
 
 @app.route('/admin/employees/<int:emp_id>/status', methods=['POST'])
 @master_admin_required
