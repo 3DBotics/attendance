@@ -126,7 +126,7 @@ def init_db():
     
     try:
         cursor.execute("ALTER TABLE attendance ADD COLUMN IF NOT EXISTS requires_admin_review INTEGER DEFAULT 0")
-            cursor.execute("ALTER TABLE attendance ADD COLUMN IF NOT EXISTS admin_review_reason TEXT")
+        cursor.execute("ALTER TABLE attendance ADD COLUMN IF NOT EXISTS admin_review_reason TEXT")
         cursor.execute("ALTER TABLE attendance ADD COLUMN IF NOT EXISTS is_remote_field INTEGER DEFAULT 0")
         cursor.execute("ALTER TABLE attendance ADD COLUMN IF NOT EXISTS remote_field_hours REAL DEFAULT 0")
     except:
