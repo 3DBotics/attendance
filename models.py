@@ -129,6 +129,15 @@ def init_db():
         cursor.execute("ALTER TABLE attendance ADD COLUMN IF NOT EXISTS admin_review_reason TEXT")
         cursor.execute("ALTER TABLE attendance ADD COLUMN IF NOT EXISTS is_remote_field INTEGER DEFAULT 0")
         cursor.execute("ALTER TABLE attendance ADD COLUMN IF NOT EXISTS remote_field_hours REAL DEFAULT 0")
+        
+        # Migration for admin_auth_codes
+        cursor.execute("ALTER TABLE admin_auth_codes ADD COLUMN IF NOT EXISTS allowable_hours REAL DEFAULT 0")
+        # Update check constraint for code_type if possible, or just handle it via code
+        try:
+            cursor.execute("ALTER TABLE admin_auth_codes DROP CONSTRAINT IF EXISTS admin_auth_codes_code_type_check")
+            cursor.execute("ALTER TABLE admin_auth_codes ADD CONSTRAINT admin_auth_codes_code_type_check CHECK (code_type IN ('early_start', 'overtime', 'remote_field'))")
+        except:
+            pass
     except:
         pass
     
