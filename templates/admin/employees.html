@@ -30,7 +30,7 @@
                 <td class="px-6 py-4 text-sm text-gray-900">
                     <div class="flex items-center">
                         {% if emp.id_photo %}
-                        <img src="/{{ emp.id_photo }}" class="w-8 h-8 rounded-full mr-2 object-cover">
+                        <img src="{{ emp.id_photo if emp.id_photo.startswith('data:') else '/' + emp.id_photo }}" class="w-8 h-8 rounded-full mr-2 object-cover">
                         {% else %}
                         <div class="w-8 h-8 rounded-full bg-gray-300 mr-2 flex items-center justify-center">
                             <i class="fas fa-user text-gray-500 text-xs"></i>
@@ -76,9 +76,15 @@
     </table>
 </div>
 
+<!-- Add Employee Modal -->
 <div id="addEmployeeModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto py-4">
     <div class="bg-white rounded-xl p-6 w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto">
-        <h2 class="text-xl font-bold text-teal-800 mb-4">Add New Employee</h2>
+        <div class="flex justify-between items-start mb-4">
+            <h2 class="text-xl font-bold text-teal-800">Add New Employee</h2>
+            <button type="button" onclick="closeModal('addEmployeeModal')" class="text-gray-500 hover:text-gray-700">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
         <form action="/admin/employees/add" method="POST" enctype="multipart/form-data">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="space-y-4">
@@ -172,31 +178,32 @@
                         </div>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700">4-Digit PIN *</label>
-                        <input type="password" name="pin" pattern="\d{4}" maxlength="4" required class="mt-1 w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500" placeholder="Enter 4-digit PIN">
+                        <label class="block text-sm font-medium text-gray-700">PIN (4 digits) *</label>
+                        <input type="password" name="pin" required pattern="\d{4}" maxlength="4" class="mt-1 w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500" placeholder="Enter 4-digit PIN">
                     </div>
                 </div>
                 
                 <div class="space-y-4">
                     <h3 class="font-semibold text-teal-700 border-b pb-2">ID Photo & Documents</h3>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">ID Photo (Camera Capture)</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">ID Photo</label>
                         <div class="border-2 border-dashed border-gray-300 rounded-lg p-4">
-                            <video id="addCameraPreview" class="w-full h-40 bg-black rounded hidden" autoplay playsinline></video>
-                            <img id="addCapturedPhoto" class="w-full h-40 object-cover rounded hidden">
-                            <div id="addCameraPlaceholder" class="w-full h-40 bg-gray-100 rounded flex items-center justify-center">
-                                <i class="fas fa-camera text-4xl text-gray-400"></i>
+                            <div id="addCameraPlaceholder" class="text-center py-8">
+                                <i class="fas fa-camera text-4xl text-gray-400 mb-2"></i>
+                                <p class="text-sm text-gray-500">Take a photo for ID</p>
+                                <button type="button" onclick="startCamera('add')" class="mt-4 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
+                                    Start Camera
+                                </button>
                             </div>
-                            <input type="hidden" name="id_photo_data" id="addIdPhotoData">
-                            <div class="mt-2 flex space-x-2">
-                                <button type="button" onclick="startCamera('add')" class="flex-1 px-3 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 text-sm">
-                                    <i class="fas fa-camera mr-1"></i> Start Camera
+                            <video id="addCameraPreview" class="hidden w-full rounded-lg" autoplay playsinline></video>
+                            <img id="addCapturedPhoto" class="hidden w-full rounded-lg">
+                            <input type="hidden" name="id_photo" id="addIdPhotoData">
+                            <div class="mt-4 flex justify-center space-x-2">
+                                <button type="button" id="addCaptureBtn" onclick="capturePhoto('add')" class="hidden px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700">
+                                    Capture Photo
                                 </button>
-                                <button type="button" onclick="capturePhoto('add')" class="flex-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm hidden" id="addCaptureBtn">
-                                    <i class="fas fa-circle mr-1"></i> Capture
-                                </button>
-                                <button type="button" onclick="retakePhoto('add')" class="flex-1 px-3 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 text-sm hidden" id="addRetakeBtn">
-                                    <i class="fas fa-redo mr-1"></i> Retake
+                                <button type="button" id="addRetakeBtn" onclick="retakePhoto('add')" class="hidden px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700">
+                                    Retake
                                 </button>
                             </div>
                         </div>
@@ -269,9 +276,15 @@
     </div>
 </div>
 
+<!-- Edit Employee Modal -->
 <div id="editEmployeeModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto py-4">
     <div class="bg-white rounded-xl p-6 w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto">
-        <h2 class="text-xl font-bold text-teal-800 mb-4">Edit Employee</h2>
+        <div class="flex justify-between items-start mb-4">
+            <h2 class="text-xl font-bold text-teal-800">Edit Employee</h2>
+            <button type="button" onclick="closeModal('editEmployeeModal')" class="text-gray-500 hover:text-gray-700">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
         <form id="editEmployeeForm" method="POST" enctype="multipart/form-data">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="space-y-4">
@@ -375,30 +388,31 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">ID Photo</label>
                         <div class="border-2 border-dashed border-gray-300 rounded-lg p-4">
-                            <img id="editCurrentPhoto" class="w-full h-40 object-cover rounded hidden">
-                            <video id="editCameraPreview" class="w-full h-40 bg-black rounded hidden" autoplay playsinline></video>
-                            <img id="editCapturedPhoto" class="w-full h-40 object-cover rounded hidden">
-                            <div id="editCameraPlaceholder" class="w-full h-40 bg-gray-100 rounded flex items-center justify-center">
-                                <i class="fas fa-camera text-4xl text-gray-400"></i>
+                            <div id="editCameraPlaceholder" class="text-center py-8">
+                                <img id="editCurrentPhoto" class="hidden w-32 h-32 rounded-full mx-auto mb-4 object-cover border-4 border-teal-200">
+                                <i class="fas fa-camera text-4xl text-gray-400 mb-2"></i>
+                                <p class="text-sm text-gray-500">Update ID photo</p>
+                                <button type="button" onclick="startCamera('edit')" class="mt-4 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
+                                    Start Camera
+                                </button>
                             </div>
-                            <input type="hidden" name="id_photo_data" id="editIdPhotoData">
-                            <div class="mt-2 flex space-x-2">
-                                <button type="button" onclick="startCamera('edit')" class="flex-1 px-3 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 text-sm">
-                                    <i class="fas fa-camera mr-1"></i> New Photo
+                            <video id="editCameraPreview" class="hidden w-full rounded-lg" autoplay playsinline></video>
+                            <img id="editCapturedPhoto" class="hidden w-full rounded-lg">
+                            <input type="hidden" name="id_photo" id="editIdPhotoData">
+                            <div class="mt-4 flex justify-center space-x-2">
+                                <button type="button" id="editCaptureBtn" onclick="capturePhoto('edit')" class="hidden px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700">
+                                    Capture Photo
                                 </button>
-                                <button type="button" onclick="capturePhoto('edit')" class="flex-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm hidden" id="editCaptureBtn">
-                                    <i class="fas fa-circle mr-1"></i> Capture
-                                </button>
-                                <button type="button" onclick="retakePhoto('edit')" class="flex-1 px-3 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 text-sm hidden" id="editRetakeBtn">
-                                    <i class="fas fa-redo mr-1"></i> Retake
+                                <button type="button" id="editRetakeBtn" onclick="retakePhoto('edit')" class="hidden px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700">
+                                    Retake
                                 </button>
                             </div>
                         </div>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700">CV/Resume (PDF) - Upload new to replace</label>
+                        <label class="block text-sm font-medium text-gray-700">CV/Resume (PDF)</label>
+                        <p id="edit_cv_status" class="text-xs text-gray-500 mb-1"></p>
                         <input type="file" name="cv_file" accept=".pdf" class="mt-1 w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500">
-                        <p id="edit_cv_status" class="text-xs text-gray-500 mt-1"></p>
                     </div>
                     
                     <h3 class="font-semibold text-teal-700 border-b pb-2 pt-4">Government IDs</h3>
@@ -464,6 +478,7 @@
     </div>
 </div>
 
+<!-- View Employee Modal -->
 <div id="viewEmployeeModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto py-4">
     <div class="bg-white rounded-xl p-6 w-full max-w-3xl mx-4 max-h-[90vh] overflow-y-auto">
         <div class="flex justify-between items-start mb-4">
@@ -476,9 +491,15 @@
     </div>
 </div>
 
+<!-- Status Change Modal -->
 <div id="statusChangeModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
     <div class="bg-white rounded-xl p-6 w-full max-w-md">
-        <h2 class="text-xl font-bold mb-4 text-coral-300">Change Employee Status</h2>
+        <div class="flex justify-between items-start mb-4">
+            <h2 class="text-xl font-bold text-coral-300">Change Employee Status</h2>
+            <button type="button" onclick="closeModal('statusChangeModal')" class="text-gray-500 hover:text-gray-700">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
         <p class="text-gray-600 mb-4">Change status for <span id="statusChangeName" class="font-bold"></span></p>
         <form id="statusChangeForm" method="POST">
             <div class="space-y-4">
@@ -498,7 +519,7 @@
             </div>
             <div class="mt-6 flex justify-end space-x-3">
                 <button type="button" onclick="closeModal('statusChangeModal')" class="px-4 py-2 border rounded-lg hover:bg-gray-50">Cancel</button>
-                <button type="submit" class="px-4 py-2 bg-coral-300 text-white rounded-lg hover:bg-coral-400">Confirm Change</button>
+                <button type="submit" class="px-4 py-2 bg-coral-300 text-white rounded-lg hover:bg-coral-500">Confirm Change</button>
             </div>
         </form>
     </div>
@@ -589,7 +610,7 @@ function viewEmployee(id) {
                     <div>
                         <div class="text-center mb-4">
                             ${emp.id_photo ? 
-                                `<img src="/${emp.id_photo}" class="w-32 h-32 rounded-full mx-auto object-cover border-4 border-teal-200">` :
+                                `<img src="${emp.id_photo.startsWith('data:') ? emp.id_photo : '/' + emp.id_photo}" class="w-32 h-32 rounded-full mx-auto object-cover border-4 border-teal-200">` :
                                 `<div class="w-32 h-32 rounded-full mx-auto bg-gray-300 flex items-center justify-center border-4 border-teal-200"><i class="fas fa-user text-4xl text-gray-500"></i></div>`
                             }
                             <h3 class="text-xl font-bold mt-2">${emp.first_name} ${emp.last_name}</h3>
@@ -677,7 +698,7 @@ function editEmployee(id) {
             const currentPhoto = document.getElementById('editCurrentPhoto');
             const placeholder = document.getElementById('editCameraPlaceholder');
             if (emp.id_photo) {
-                currentPhoto.src = '/' + emp.id_photo;
+                currentPhoto.src = emp.id_photo.startsWith('data:') ? emp.id_photo : '/' + emp.id_photo;
                 currentPhoto.classList.remove('hidden');
                 placeholder.classList.add('hidden');
             } else {

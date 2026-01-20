@@ -12,7 +12,7 @@
 
 <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
     <h2 class="text-xl font-bold text-gray-800 mb-4">About Authorization Codes</h2>
-    <div class="grid md:grid-cols-2 gap-4 text-sm text-gray-600">
+    <div class="grid md:grid-cols-3 gap-4 text-sm text-gray-600">
         <div class="bg-teal-50 p-4 rounded-lg">
             <h3 class="font-bold text-teal-800 mb-2"><i class="fas fa-sun mr-2"></i>Early Start Codes</h3>
             <p>Used when an employee needs to clock in before their scheduled start time. The early arrival time will be counted and paid.</p>
@@ -45,7 +45,14 @@
         <tbody class="divide-y divide-gray-200">
             {% for code in codes %}
             <tr>
-                <td class="px-6 py-4 text-sm font-mono font-bold text-gray-900">{{ code.code }}</td>
+                <td class="px-6 py-4 text-sm font-mono font-bold text-gray-900">
+                    <div class="flex items-center space-x-2">
+                        <span>{{ code.code }}</span>
+                        <button onclick="copyToClipboard('{{ code.code }}', this)" class="text-gray-400 hover:text-teal-600 transition-colors" title="Copy Code">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </div>
+                </td>
                 <td class="px-6 py-4 text-sm">
                     <span class="px-2 py-1 text-xs rounded-full {% if code.code_type == 'early_start' %}bg-teal-100 text-teal-700{% elif code.code_type == 'overtime' %}bg-orange-100 text-orange-700{% else %}bg-blue-100 text-blue-700{% endif %}">
                         {% if code.code_type == 'early_start' %}Early Start{% elif code.code_type == 'overtime' %}Overtime{% else %}Remote/Field{% endif %}
@@ -80,9 +87,15 @@
     </table>
 </div>
 
+<!-- Add Code Modal -->
 <div id="addCodeModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
     <div class="bg-white rounded-xl p-6 w-full max-w-md">
-        <h2 class="text-xl font-bold text-teal-800 mb-4">Generate Authorization Code</h2>
+        <div class="flex justify-between items-start mb-4">
+            <h2 class="text-xl font-bold text-teal-800">Generate Authorization Code</h2>
+            <button type="button" onclick="document.getElementById('addCodeModal').classList.add('hidden')" class="text-gray-500 hover:text-gray-700">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
         <form action="/admin/auth-codes/add" method="POST">
             <div class="space-y-4">
                 <div>
@@ -131,9 +144,15 @@
     </div>
 </div>
 
+<!-- Edit Code Modal -->
 <div id="editCodeModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
     <div class="bg-white rounded-xl p-6 w-full max-w-md">
-        <h2 class="text-xl font-bold text-teal-800 mb-4">Edit Authorization Code</h2>
+        <div class="flex justify-between items-start mb-4">
+            <h2 class="text-xl font-bold text-teal-800">Edit Authorization Code</h2>
+            <button type="button" onclick="document.getElementById('editCodeModal').classList.add('hidden')" class="text-gray-500 hover:text-gray-700">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
         <form id="editCodeForm" method="POST">
             <div class="space-y-4">
                 <div>
@@ -178,6 +197,7 @@
     </div>
 </div>
 
+<!-- Delete Modal -->
 <div id="deleteModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
     <div class="bg-white rounded-xl p-6 w-full max-w-md">
         <h2 class="text-xl font-bold text-red-600 mb-4">Delete Authorization Code</h2>
@@ -193,43 +213,48 @@
 
 {% block scripts %}
 <script>
+function copyToClipboard(text, btn) {
+    navigator.clipboard.writeText(text).then(() => {
+        const icon = btn.querySelector('i');
+        icon.classList.remove('fa-copy');
+        icon.classList.add('fa-check', 'text-green-500');
+        setTimeout(() => {
+            icon.classList.remove('fa-check', 'text-green-500');
+            icon.classList.add('fa-copy');
+        }, 2000);
+    });
+}
+
 async function generateCode() {
     try {
         const response = await fetch('/admin/auth-codes/generate', { method: 'POST' });
         const data = await response.json();
-        if (data.success) {
-            document.getElementById('new_code').value = data.code;
-        }
-    } catch (error) {
-        console.error('Error generating code:', error);
+        document.getElementById('new_code').value = data.code;
+    } catch (err) {
+        console.error('Error generating code:', err);
     }
 }
 
 function toggleAllowableHours(prefix) {
-    const typeSelect = document.getElementById(prefix === 'new' ? 'new_code_type' : 'edit_code_type');
-    const hoursDiv = document.getElementById(prefix === 'new' ? 'new_allowable_hours_div' : 'edit_allowable_hours_div');
-    if (typeSelect.value === 'remote_field') {
-        hoursDiv.classList.remove('hidden');
+    const type = document.getElementById(prefix + '_code_type').value;
+    const div = document.getElementById(prefix + '_allowable_hours_div');
+    if (type === 'remote_field') {
+        div.classList.remove('hidden');
     } else {
-        hoursDiv.classList.add('hidden');
+        div.classList.add('hidden');
     }
 }
 
-function editCode(id, code, codeType, description, usesRemaining, validUntil, isActive, allowableHours) {
+function editCode(id, code, type, desc, uses, valid, active, hours) {
     document.getElementById('editCodeForm').action = '/admin/auth-codes/' + id + '/edit';
     document.getElementById('edit_code').value = code;
-    document.getElementById('edit_code_type').value = codeType;
-    
-    let typeDisplay = 'Early Start';
-    if (codeType === 'overtime') typeDisplay = 'Overtime';
-    if (codeType === 'remote_field') typeDisplay = 'Remote/Field';
-    document.getElementById('edit_code_type_display').value = typeDisplay;
-    
-    document.getElementById('edit_description').value = description;
-    document.getElementById('edit_uses').value = usesRemaining;
-    document.getElementById('edit_valid_until').value = validUntil;
-    document.getElementById('edit_is_active').checked = isActive == 1;
-    document.getElementById('edit_allowable_hours').value = allowableHours || 0;
+    document.getElementById('edit_code_type').value = type;
+    document.getElementById('edit_code_type_display').value = type.replace('_', ' ').toUpperCase();
+    document.getElementById('edit_description').value = desc;
+    document.getElementById('edit_uses').value = uses;
+    document.getElementById('edit_valid_until').value = valid;
+    document.getElementById('edit_is_active').checked = active;
+    document.getElementById('edit_allowable_hours').value = hours;
     
     toggleAllowableHours('edit');
     document.getElementById('editCodeModal').classList.remove('hidden');

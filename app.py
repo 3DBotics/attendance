@@ -123,7 +123,12 @@ def validate_and_save_id_photo(photo_data, employee_id):
         max_size = (400, 400)
         img.thumbnail(max_size, Image.Resampling.LANCZOS)
         img.save(photo_path, 'JPEG', quality=70, optimize=True)
-        return photo_path
+        
+        # Return base64 string instead of path to ensure persistence on Railway
+        buffered = BytesIO()
+        img.save(buffered, format="JPEG", quality=70)
+        img_str = base64.b64encode(buffered.getvalue()).decode()
+        return f"data:image/jpeg;base64,{img_str}"
     except Exception:
         return None
 
