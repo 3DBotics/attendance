@@ -1326,7 +1326,7 @@ class Admin:
                 if admin.get('password_hash') and check_password_hash(admin['password_hash'], password):
                     return admin
             except Exception:
-                # Invalid password hash format
+                # Invalid password hash format or missing dependency
                 pass
         return None
     
