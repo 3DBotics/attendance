@@ -1303,8 +1303,8 @@ class Admin:
     def get_by_username(username):
         conn = get_db()
         cursor = get_cursor(conn)
-        # Use a more flexible check for is_active that works with both boolean and integer types
-        cursor.execute('SELECT * FROM admins WHERE username = %s AND (is_active = TRUE OR is_active = 1 OR is_active IS NULL)', (username,))
+        # Check if user is active (handles boolean type properly)
+        cursor.execute('SELECT * FROM admins WHERE username = %s AND (is_active = TRUE OR is_active IS NULL)', (username,))
         admin = cursor.fetchone()
         conn.close()
         return admin
