@@ -1320,14 +1320,27 @@ class Admin:
     
     @staticmethod
     def verify_password(username, password):
-        admin = Admin.get_by_username(username)
-        if admin:
-            try:
-                if admin.get('password_hash') and check_password_hash(admin['password_hash'], password):
-                    return admin
-            except Exception:
-                # Invalid password hash format or missing dependency
-                pass
+        try:
+            admin = Admin.get_by_username(username)
+            if admin:
+                print(f"[DEBUG] Admin found: {username}")
+                print(f"[DEBUG] Password hash exists: {bool(admin.get('password_hash'))}")
+                if admin.get('password_hash'):
+                    try:
+                        result = check_password_hash(admin['password_hash'], password)
+                        print(f"[DEBUG] Password check result: {result}")
+                        if result:
+                            return admin
+                    except Exception as e:
+                        print(f"[ERROR] Password verification failed: {str(e)}")
+                        import traceback
+                        traceback.print_exc()
+            else:
+                print(f"[DEBUG] Admin not found: {username}")
+        except Exception as e:
+            print(f"[ERROR] verify_password exception: {str(e)}")
+            import traceback
+            traceback.print_exc()
         return None
     
     @staticmethod

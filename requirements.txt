@@ -1,1 +1,10 @@
-Flask\nWerkzeug\npsycopg2-binary\nrequests\nFlask-Session\npython-dateutil\npytz\nPillow\nbcrypt\ngunicorn
+Flask
+Werkzeug
+psycopg2-binary
+requests
+Flask-Session
+python-dateutil
+pytz
+Pillow
+bcrypt
+gunicorn
