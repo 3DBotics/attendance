@@ -1352,22 +1352,28 @@ class Admin:
             result = cursor.fetchone()
             conn.commit()
             conn.close()
-            return result['id']
+            return result['id'], None
         except psycopg2.IntegrityError as e:
             import traceback
-            print(f"IntegrityError in Admin.create: {str(e)}")
-            print(f"Username attempted: {username}")
+            error_msg = str(e)
+            print(f"IntegrityError in Admin.create: {error_msg}")
+            print(f"Username attempted: {username}, Role: {role}")
             print(traceback.format_exc())
             conn.rollback()
             conn.close()
-            return None
+            if 'username' in error_msg.lower() or 'admins_username_key' in error_msg:
+                return None, "Username already exists"
+            elif 'role' in error_msg.lower() or 'admins_role_check' in error_msg:
+                return None, f"Invalid role '{role}'. Please contact administrator."
+            else:
+                return None, "Database constraint violation"
         except Exception as e:
             import traceback
             print(f"Unexpected error in Admin.create: {str(e)}")
             print(traceback.format_exc())
             conn.rollback()
             conn.close()
-            return None
+            return None, "An unexpected error occurred"
     
     @staticmethod
     def update(admin_id, full_name, role, is_active):

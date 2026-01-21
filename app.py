@@ -677,12 +677,12 @@ def admin_admins():
 @master_admin_required
 def add_admin():
     data = request.form
-    result = Admin.create(data['username'], data['password'], data['full_name'], data.get('role', 'sub_admin'))
+    result, error = Admin.create(data['username'], data['password'], data['full_name'], data.get('role', 'sub_admin'))
     if result:
-        ActivityLog.log(session['admin_id'], session['admin_name'], 'CREATE', 'admin', result, f"Created admin {data['username']}", request.remote_addr)
-        flash('Admin user created', 'success')
+        ActivityLog.log(session['admin_id'], session['admin_name'], 'CREATE', 'admin', result, f"Created admin {data['username']} with role {data.get('role', 'sub_admin')}", request.remote_addr)
+        flash('Admin user created successfully', 'success')
     else:
-        flash('Username already exists', 'error')
+        flash(error or 'Failed to create admin user', 'error')
     return redirect(url_for('admin_admins'))
 
 @app.route('/admin/admins/<int:admin_id>/update', methods=['POST'])
