@@ -882,33 +882,13 @@ def record_attendance():
         img.save(output, 'JPEG', quality=60, optimize=True)
         output.seek(0)
         
-        if supabase_client:
-            try:
-                file_bytes = output.getvalue()
-                result = supabase_client.storage.from_('attendance-photos').upload(
-                    path=filename,
-                    file=file_bytes,
-                    file_options={"content-type": "image/jpeg", "upsert": "true"}
-                )
-                photo_path = supabase_client.storage.from_('attendance-photos').get_public_url(filename)
-                print(f"Photo uploaded to Supabase Storage: {photo_path}")
-            except Exception as e:
-                import traceback
-                print(f"Supabase Storage upload error: {e}")
-                print(traceback.format_exc())
-                filepath = os.path.join(UPLOAD_FOLDER, filename)
-                output.seek(0)
-                with open(filepath, 'wb') as f:
-                    f.write(output.read())
-                photo_path = f"static/uploads/{filename}"
-                print(f"Fallback: Photo saved locally to {photo_path}")
-        else:
-            print("Supabase client not initialized, saving locally")
-            filepath = os.path.join(UPLOAD_FOLDER, filename)
-            output.seek(0)
-            with open(filepath, 'wb') as f:
-                f.write(output.read())
-            photo_path = f"static/uploads/{filename}"
+        # Temporarily using local storage only until Supabase Storage is properly configured
+        filepath = os.path.join(UPLOAD_FOLDER, filename)
+        output.seek(0)
+        with open(filepath, 'wb') as f:
+            f.write(output.read())
+        photo_path = f"static/uploads/{filename}"
+        print(f"Photo saved locally to {photo_path}")
     else:
         photo_path = None
     
