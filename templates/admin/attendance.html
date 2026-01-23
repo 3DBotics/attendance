@@ -78,23 +78,12 @@
                 </td>
                 <td class="px-6 py-4 text-sm text-gray-900">
                     {% if att.time_in %}
-                        {% if att.time_in is string %}
-                            {# Handle ISO string or space-separated string #}
-                            {{ att.time_in[11:16] }}
-                        {% else %}
-                            {# Handle datetime object #}
-                            {{ att.time_in.strftime('%H:%M') }}
-                        {% endif %}
-                        {% if att.time_in_photo %}
-                        {# Ensure path is relative and doesn't have double slashes #}
-                        {% set photo_url = att.time_in_photo %}
-                        {% if photo_url.startswith('/home/ubuntu/attendance/') %}
-                            {% set photo_url = photo_url.replace('/home/ubuntu/attendance/', '') %}
-                        {% endif %}
-                        <a href="/{{ photo_url.lstrip('/') }}" target="_blank" class="text-teal-500 ml-2"><i class="fas fa-camera"></i></a>
-                        {% endif %}
+                    {{ att.time_in.strftime('%H:%M') if att.time_in is not string else att.time_in[11:16] }}
+                    {% if att.time_in_photo %}
+                    <a href="/{{ att.time_in_photo }}" target="_blank" class="text-teal-500 ml-2"><i class="fas fa-camera"></i></a>
+                    {% endif %}
                     {% else %}
-                        -
+                    -
                     {% endif %}
                 </td>
                 <td class="px-6 py-4 text-sm">
@@ -119,24 +108,19 @@
                 </td>
                 <td class="px-6 py-4 text-sm text-gray-900">
                     {% if att.time_out %}
-                        {% set time_out_str = att.time_out if att.time_out is string else att.time_out.strftime('%Y-%m-%d %H:%M') %}
-                        {% set time_out_date = time_out_str[:10] %}
-                        {% set time_out_time = time_out_str[11:16] %}
-                        {% set record_date_str = att.date|string %}
-                        {% if time_out_date != record_date_str %}
-                        <span class="text-xs text-blue-600">({{ time_out_date[5:] }})</span>
-                        {% endif %}
-                        {{ time_out_time }}
-                        {% if att.time_out_photo %}
-                        {# Ensure path is relative and doesn't have double slashes #}
-                        {% set photo_url = att.time_out_photo %}
-                        {% if photo_url.startswith('/home/ubuntu/attendance/') %}
-                            {% set photo_url = photo_url.replace('/home/ubuntu/attendance/', '') %}
-                        {% endif %}
-                        <a href="/{{ photo_url.lstrip('/') }}" target="_blank" class="text-teal-500 ml-2"><i class="fas fa-camera"></i></a>
-                        {% endif %}
+                    {% set time_out_str = att.time_out.strftime('%Y-%m-%d %H:%M') if att.time_out is not string else att.time_out %}
+                    {% set time_out_date = time_out_str[:10] %}
+                    {% set time_out_time = att.time_out.strftime('%H:%M') if att.time_out is not string else att.time_out[11:16] %}
+                    {% set record_date_str = att.date|string %}
+                    {% if time_out_date != record_date_str %}
+                    <span class="text-xs text-blue-600">({{ time_out_date[5:] }})</span>
+                    {% endif %}
+                    {{ time_out_time }}
+                    {% if att.time_out_photo %}
+                    <a href="/{{ att.time_out_photo }}" target="_blank" class="text-teal-500 ml-2"><i class="fas fa-camera"></i></a>
+                    {% endif %}
                     {% else %}
-                        -
+                    -
                     {% endif %}
                 </td>
                 <td class="px-6 py-4 text-sm {% if att.requires_admin_review %}text-purple-600 font-bold{% elif att.tardiness_minutes > 0 %}text-red-600{% else %}text-gray-900{% endif %}">

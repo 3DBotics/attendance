@@ -829,8 +829,7 @@ def record_attendance():
         max_size = (640, 480)
         img.thumbnail(max_size, Image.Resampling.LANCZOS)
         img.save(filepath, 'JPEG', quality=60, optimize=True)
-        # Store relative path to ensure links work correctly in the UI
-        photo_path = os.path.join(UPLOAD_FOLDER, filename)
+        photo_path = filepath
     else:
         photo_path = None
     
