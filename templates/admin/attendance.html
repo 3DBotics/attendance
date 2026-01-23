@@ -82,7 +82,7 @@
                     {% if att.time_in_photo %}
                     {% set photo_url = att.time_in_photo|fix_photo_url %}
                     {% if photo_url %}
-                    <a href="/{{ photo_url }}" target="_blank" class="text-teal-500 ml-2"><i class="fas fa-camera"></i></a>
+                    <a href="{% if photo_url.startswith('http') %}{{ photo_url }}{% else %}/{{ photo_url }}{% endif %}" target="_blank" class="text-teal-500 ml-2"><i class="fas fa-camera"></i></a>
                     {% endif %}
                     {% endif %}
                     {% else %}
@@ -115,7 +115,7 @@
                     {% if att.time_out_photo %}
                     {% set photo_url = att.time_out_photo|fix_photo_url %}
                     {% if photo_url %}
-                    <a href="/{{ photo_url }}" target="_blank" class="text-teal-500 ml-2"><i class="fas fa-camera"></i></a>
+                    <a href="{% if photo_url.startswith('http') %}{{ photo_url }}{% else %}/{{ photo_url }}{% endif %}" target="_blank" class="text-teal-500 ml-2"><i class="fas fa-camera"></i></a>
                     {% endif %}
                     {% endif %}
                     {% else %}

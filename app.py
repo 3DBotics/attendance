@@ -11,28 +11,43 @@ from models import (
 )
 from pdf_payslip import generate_payslip_pdf
 import pytz
+from supabase import create_client, Client
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SESSION_SECRET', 'dev-secret-key')
 
+SUPABASE_URL = os.environ.get('SUPABASE_URL', '')
+SUPABASE_KEY = os.environ.get('SUPABASE_KEY', '')
+supabase_client: Client = None
+if SUPABASE_URL and SUPABASE_KEY:
+    supabase_client = create_client(SUPABASE_URL, SUPABASE_KEY)
+
 MANILA_TZ = pytz.timezone('Asia/Manila')
 
 @app.template_filter('manila_time')
-def manila_time_filter(timestamp_str):
-    if not timestamp_str:
+def manila_time_filter(timestamp_obj):
+    if not timestamp_obj:
         return '-'
     try:
-        timestamp_str = str(timestamp_str)
-        if 'T' in timestamp_str:
-            dt = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
+        if isinstance(timestamp_obj, datetime):
+            if timestamp_obj.tzinfo is None:
+                dt = pytz.UTC.localize(timestamp_obj)
+            else:
+                dt = timestamp_obj
         else:
-            dt = datetime.strptime(timestamp_str.split('.')[0], '%Y-%m-%d %H:%M:%S')
-            dt = pytz.UTC.localize(dt)
+            timestamp_str = str(timestamp_obj)
+            if 'T' in timestamp_str:
+                dt = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
+            elif '+' in timestamp_str or timestamp_str.endswith('00'):
+                dt = datetime.fromisoformat(timestamp_str)
+            else:
+                dt = datetime.strptime(timestamp_str.split('.')[0], '%Y-%m-%d %H:%M:%S')
+                dt = pytz.UTC.localize(dt)
         manila_dt = dt.astimezone(MANILA_TZ)
         return manila_dt.strftime('%H:%M')
-    except:
+    except Exception as e:
         try:
-            return timestamp_str[11:16]
+            return str(timestamp_obj)[11:16]
         except:
             return '-'
 
@@ -41,6 +56,8 @@ def fix_photo_url_filter(photo_path):
     if not photo_path:
         return None
     photo_path = str(photo_path)
+    if photo_path.startswith('http://') or photo_path.startswith('https://'):
+        return photo_path
     if '/home/ubuntu/attendance/' in photo_path:
         photo_path = photo_path.replace('/home/ubuntu/attendance/', '')
     if not photo_path.startswith('static/') and not photo_path.startswith('/'):
@@ -853,7 +870,6 @@ def record_attendance():
         photo_bytes = base64.b64decode(photo_data)
         timestamp = get_manila_now().strftime('%Y%m%d_%H%M%S')
         filename = f"{employee_id}_{purpose}_{timestamp}.jpg"
-        filepath = os.path.join(UPLOAD_FOLDER, filename)
         
         from PIL import Image
         from io import BytesIO
@@ -861,8 +877,32 @@ def record_attendance():
         img = img.convert('RGB')
         max_size = (640, 480)
         img.thumbnail(max_size, Image.Resampling.LANCZOS)
-        img.save(filepath, 'JPEG', quality=60, optimize=True)
-        photo_path = filepath
+        
+        output = BytesIO()
+        img.save(output, 'JPEG', quality=60, optimize=True)
+        output.seek(0)
+        
+        if supabase_client:
+            try:
+                result = supabase_client.storage.from_('attendance-photos').upload(
+                    path=filename,
+                    file=output.read(),
+                    file_options={"content-type": "image/jpeg"}
+                )
+                photo_path = supabase_client.storage.from_('attendance-photos').get_public_url(filename)
+            except Exception as e:
+                print(f"Supabase Storage upload error: {e}")
+                filepath = os.path.join(UPLOAD_FOLDER, filename)
+                output.seek(0)
+                with open(filepath, 'wb') as f:
+                    f.write(output.read())
+                photo_path = f"static/uploads/{filename}"
+        else:
+            filepath = os.path.join(UPLOAD_FOLDER, filename)
+            output.seek(0)
+            with open(filepath, 'wb') as f:
+                f.write(output.read())
+            photo_path = f"static/uploads/{filename}"
     else:
         photo_path = None
     
