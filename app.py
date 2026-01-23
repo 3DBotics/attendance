@@ -10,9 +10,42 @@ from models import (
     Admin, DatabaseManager, get_manila_now, AdminAuthCode
 )
 from pdf_payslip import generate_payslip_pdf
+import pytz
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SESSION_SECRET', 'dev-secret-key')
+
+MANILA_TZ = pytz.timezone('Asia/Manila')
+
+@app.template_filter('manila_time')
+def manila_time_filter(timestamp_str):
+    if not timestamp_str:
+        return '-'
+    try:
+        timestamp_str = str(timestamp_str)
+        if 'T' in timestamp_str:
+            dt = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
+        else:
+            dt = datetime.strptime(timestamp_str.split('.')[0], '%Y-%m-%d %H:%M:%S')
+            dt = pytz.UTC.localize(dt)
+        manila_dt = dt.astimezone(MANILA_TZ)
+        return manila_dt.strftime('%H:%M')
+    except:
+        try:
+            return timestamp_str[11:16]
+        except:
+            return '-'
+
+@app.template_filter('fix_photo_url')
+def fix_photo_url_filter(photo_path):
+    if not photo_path:
+        return None
+    photo_path = str(photo_path)
+    if '/home/ubuntu/attendance/' in photo_path:
+        photo_path = photo_path.replace('/home/ubuntu/attendance/', '')
+    if not photo_path.startswith('static/') and not photo_path.startswith('/'):
+        photo_path = f"static/uploads/{photo_path.split('/')[-1]}"
+    return photo_path
 
 UPLOAD_FOLDER = 'static/uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)

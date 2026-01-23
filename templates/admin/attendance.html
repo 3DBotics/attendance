@@ -78,9 +78,12 @@
                 </td>
                 <td class="px-6 py-4 text-sm text-gray-900">
                     {% if att.time_in %}
-                    {{ att.time_in.strftime('%H:%M') if att.time_in is not string else att.time_in[11:16] }}
+                    {{ att.time_in|manila_time }}
                     {% if att.time_in_photo %}
-                    <a href="/{{ att.time_in_photo }}" target="_blank" class="text-teal-500 ml-2"><i class="fas fa-camera"></i></a>
+                    {% set photo_url = att.time_in_photo|fix_photo_url %}
+                    {% if photo_url %}
+                    <a href="/{{ photo_url }}" target="_blank" class="text-teal-500 ml-2"><i class="fas fa-camera"></i></a>
+                    {% endif %}
                     {% endif %}
                     {% else %}
                     -
@@ -108,16 +111,12 @@
                 </td>
                 <td class="px-6 py-4 text-sm text-gray-900">
                     {% if att.time_out %}
-                    {% set time_out_str = att.time_out.strftime('%Y-%m-%d %H:%M') if att.time_out is not string else att.time_out %}
-                    {% set time_out_date = time_out_str[:10] %}
-                    {% set time_out_time = att.time_out.strftime('%H:%M') if att.time_out is not string else att.time_out[11:16] %}
-                    {% set record_date_str = att.date|string %}
-                    {% if time_out_date != record_date_str %}
-                    <span class="text-xs text-blue-600">({{ time_out_date[5:] }})</span>
-                    {% endif %}
-                    {{ time_out_time }}
+                    {{ att.time_out|manila_time }}
                     {% if att.time_out_photo %}
-                    <a href="/{{ att.time_out_photo }}" target="_blank" class="text-teal-500 ml-2"><i class="fas fa-camera"></i></a>
+                    {% set photo_url = att.time_out_photo|fix_photo_url %}
+                    {% if photo_url %}
+                    <a href="/{{ photo_url }}" target="_blank" class="text-teal-500 ml-2"><i class="fas fa-camera"></i></a>
+                    {% endif %}
                     {% endif %}
                     {% else %}
                     -
