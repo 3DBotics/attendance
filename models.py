@@ -513,6 +513,12 @@ class Attendance:
             cursor.execute("SELECT type FROM holidays WHERE date = %s", (today,))
             holiday_type = cursor.fetchone()['type']
         
+        # Ensure 'now' is localized to Manila time before storing
+        if now.tzinfo is None:
+            now = MANILA_TZ.localize(now)
+        else:
+            now = now.astimezone(MANILA_TZ)
+
         cursor.execute('''
             INSERT INTO attendance (employee_id, date, time_in, time_in_photo, time_in_purpose, tardiness_minutes, is_holiday, holiday_type, early_start_approved, early_start_minutes, is_remote_field, remote_field_hours)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
@@ -584,6 +590,12 @@ class Attendance:
                 diff = work_end_time - now
                 undertime_minutes = int(diff.total_seconds() / 60)
         
+        # Ensure 'now' is localized to Manila time before storing
+        if now.tzinfo is None:
+            now = MANILA_TZ.localize(now)
+        else:
+            now = now.astimezone(MANILA_TZ)
+
         cursor.execute('''
             UPDATE attendance 
             SET time_out = %s, time_out_photo = %s, time_out_purpose = %s, undertime_minutes = %s, 
@@ -1100,14 +1112,16 @@ class PayrollRecord:
                         time_out_str = str(att['time_out'])
                         
                         if 'T' in time_in_str:
+                            # fromisoformat handles '2026-01-23T08:30:00+08:00'
                             time_in = datetime.fromisoformat(time_in_str)
                         else:
-                            time_in = datetime.strptime(time_in_str, '%Y-%m-%d %H:%M:%S')
+                            # Handle standard space-separated format
+                            time_in = datetime.strptime(time_in_str.split('.')[0], '%Y-%m-%d %H:%M:%S')
                         
                         if 'T' in time_out_str:
                             time_out = datetime.fromisoformat(time_out_str)
                         else:
-                            time_out = datetime.strptime(time_out_str, '%Y-%m-%d %H:%M:%S')
+                            time_out = datetime.strptime(time_out_str.split('.')[0], '%Y-%m-%d %H:%M:%S')
                         
                         if time_out < time_in:
                             segment_minutes = ((24 * 60) - (time_in.hour * 60 + time_in.minute)) + (time_out.hour * 60 + time_out.minute)
