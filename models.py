@@ -584,13 +584,22 @@ class Attendance:
                 diff = work_end_time - now
                 undertime_minutes = int(diff.total_seconds() / 60)
         
+        # Map purpose values to database-allowed values
+        purpose_mapping = {
+            'lunch_break_out': 'clock_out',
+            'snack_break_out': 'clock_out',
+            'emergency_out': 'clock_out',
+            'unapproved_undertime_out': 'clock_out'
+        }
+        db_purpose = purpose_mapping.get(purpose, purpose)
+        
         cursor.execute('''
             UPDATE attendance 
             SET time_out = %s, time_out_photo = %s, time_out_purpose = %s, undertime_minutes = %s, 
                 official_overtime_approved = %s, official_overtime_minutes = %s,
                 requires_admin_review = %s, admin_review_reason = %s
             WHERE id = %s
-        ''', (now.isoformat(), photo_path, purpose, undertime_minutes, is_official_overtime_approved, 
+        ''', (now.isoformat(), photo_path, db_purpose, undertime_minutes, is_official_overtime_approved, 
               official_overtime_minutes, requires_admin_review, admin_review_reason, open_record['id']))
         conn.commit()
         conn.close()
