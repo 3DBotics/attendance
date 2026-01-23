@@ -871,12 +871,59 @@ def record_attendance():
         timestamp = get_manila_now().strftime('%Y%m%d_%H%M%S')
         filename = f"{employee_id}_{purpose}_{timestamp}.jpg"
         
-        from PIL import Image
+        from PIL import Image, ImageDraw, ImageFont
         from io import BytesIO
         img = Image.open(BytesIO(photo_bytes))
         img = img.convert('RGB')
         max_size = (640, 480)
         img.thumbnail(max_size, Image.Resampling.LANCZOS)
+        
+        # Add purpose label overlay
+        draw = ImageDraw.Draw(img)
+        
+        # Purpose label mapping for display
+        purpose_labels = {
+            'clock_in': 'CLOCK IN',
+            'clock_out': 'CLOCK OUT',
+            'lunch_break_in': 'LUNCH BREAK - IN',
+            'lunch_break_out': 'LUNCH BREAK - OUT',
+            'snack_break_in': 'SNACK BREAK - IN',
+            'snack_break_out': 'SNACK BREAK - OUT',
+            'emergency_in': 'EMERGENCY - IN',
+            'emergency_out': 'EMERGENCY - OUT',
+            'early_start': 'EARLY START',
+            'remote_field': 'REMOTE/FIELD',
+            'official_overtime': 'OVERTIME',
+            'unapproved_undertime_out': 'UNDERTIME - OUT'
+        }
+        
+        purpose_text = purpose_labels.get(purpose, purpose.upper().replace('_', ' '))
+        
+        # Try to use a better font, fallback to default
+        try:
+            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 24)
+        except:
+            font = ImageFont.load_default()
+        
+        # Get text size for background rectangle
+        bbox = draw.textbbox((0, 0), purpose_text, font=font)
+        text_width = bbox[2] - bbox[0]
+        text_height = bbox[3] - bbox[1]
+        
+        # Position at top center
+        img_width, img_height = img.size
+        x = (img_width - text_width) // 2
+        y = 10
+        
+        # Draw semi-transparent background
+        padding = 10
+        draw.rectangle(
+            [(x - padding, y - padding), (x + text_width + padding, y + text_height + padding)],
+            fill=(0, 0, 0, 180)
+        )
+        
+        # Draw text in white
+        draw.text((x, y), purpose_text, fill=(255, 255, 255), font=font)
         
         output = BytesIO()
         img.save(output, 'JPEG', quality=60, optimize=True)
