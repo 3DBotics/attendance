@@ -505,6 +505,17 @@ class Attendance:
                 if early_start_approved:
                     is_early_start_approved = True
         
+        # Map frontend purpose values to database-allowed values
+        purpose_mapping = {
+            'lunch_break_in': 'clock_in',
+            'snack_break_in': 'clock_in',
+            'emergency_in': 'clock_in',
+            'early_start': 'clock_in',
+            'remote_field': 'clock_in',
+            'official_overtime': 'clock_in'
+        }
+        db_purpose = purpose_mapping.get(purpose, purpose)
+        
         cursor.execute("SELECT date FROM holidays WHERE date = %s", (today,))
         holiday = cursor.fetchone()
         is_holiday = True if holiday else False
@@ -517,7 +528,7 @@ class Attendance:
             INSERT INTO attendance (employee_id, date, time_in, time_in_photo, time_in_purpose, tardiness_minutes, is_holiday, holiday_type, early_start_approved, early_start_minutes, is_remote_field, remote_field_hours)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING id
-        ''', (employee_id, today, now.isoformat(), photo_path, purpose, tardiness_minutes, is_holiday, holiday_type, is_early_start_approved, early_start_minutes, 1 if is_remote_field else 0, remote_field_hours))
+        ''', (employee_id, today, now.isoformat(), photo_path, db_purpose, tardiness_minutes, is_holiday, holiday_type, is_early_start_approved, early_start_minutes, 1 if is_remote_field else 0, remote_field_hours))
         result = cursor.fetchone()
         conn.commit()
         record_id = result['id']
