@@ -63,17 +63,19 @@
                     <div class="text-sm text-gray-500">{{ att.emp_code }}</div>
                 </td>
                 <td class="px-6 py-4 text-sm">
-                    {% set in_purpose = att.time_in_purpose or 'clock_in' %}
-                    {% if in_purpose == 'clock_in' %}
-                    <span class="px-2 py-1 text-xs rounded-full bg-teal-100 text-teal-700">Clock In</span>
-                    {% elif in_purpose == 'lunch_break_in' %}
-                    <span class="px-2 py-1 text-xs rounded-full bg-lime-100 text-lime-700">Lunch In</span>
-                    {% elif in_purpose == 'snack_break_in' %}
-                    <span class="px-2 py-1 text-xs rounded-full bg-cyan-100 text-cyan-700">Snack In</span>
-                    {% elif in_purpose == 'emergency_in' %}
-                    <span class="px-2 py-1 text-xs rounded-full bg-orange-100 text-orange-700">Emergency In</span>
+                    {% set in_label = att.time_in_purpose_label or 'Clock In' %}
+                    {% if 'Lunch' in in_label %}
+                    <span class="px-2 py-1 text-xs rounded-full bg-lime-100 text-lime-700">{{ in_label }}</span>
+                    {% elif 'Snack' in in_label %}
+                    <span class="px-2 py-1 text-xs rounded-full bg-cyan-100 text-cyan-700">{{ in_label }}</span>
+                    {% elif 'Emergency' in in_label %}
+                    <span class="px-2 py-1 text-xs rounded-full bg-orange-100 text-orange-700">{{ in_label }}</span>
+                    {% elif 'Early Start' in in_label %}
+                    <span class="px-2 py-1 text-xs rounded-full bg-purple-100 text-purple-700">{{ in_label }}</span>
+                    {% elif 'Overtime' in in_label %}
+                    <span class="px-2 py-1 text-xs rounded-full bg-indigo-100 text-indigo-700">{{ in_label }}</span>
                     {% else %}
-                    <span class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-700">{{ in_purpose }}</span>
+                    <span class="px-2 py-1 text-xs rounded-full bg-teal-100 text-teal-700">{{ in_label }}</span>
                     {% endif %}
                 </td>
                 <td class="px-6 py-4 text-sm text-gray-900">
@@ -91,19 +93,17 @@
                 </td>
                 <td class="px-6 py-4 text-sm">
                     {% if att.time_out_purpose %}
-                    {% set out_purpose = att.time_out_purpose %}
-                    {% if out_purpose == 'clock_out' %}
-                    <span class="px-2 py-1 text-xs rounded-full bg-gray-200 text-gray-700">Clock Out</span>
-                    {% elif out_purpose == 'lunch_break_out' %}
-                    <span class="px-2 py-1 text-xs rounded-full bg-lime-100 text-lime-700">Lunch Out</span>
-                    {% elif out_purpose == 'snack_break_out' %}
-                    <span class="px-2 py-1 text-xs rounded-full bg-cyan-100 text-cyan-700">Snack Out</span>
-                    {% elif out_purpose == 'emergency_out' %}
-                    <span class="px-2 py-1 text-xs rounded-full bg-orange-100 text-orange-700">Emergency Out</span>
-                    {% elif out_purpose == 'unapproved_undertime_out' %}
-                    <span class="px-2 py-1 text-xs rounded-full bg-red-100 text-red-700">Undertime</span>
+                    {% set out_label = att.time_out_purpose_label or 'Clock Out' %}
+                    {% if 'Lunch' in out_label %}
+                    <span class="px-2 py-1 text-xs rounded-full bg-lime-100 text-lime-700">{{ out_label }}</span>
+                    {% elif 'Snack' in out_label %}
+                    <span class="px-2 py-1 text-xs rounded-full bg-cyan-100 text-cyan-700">{{ out_label }}</span>
+                    {% elif 'Emergency' in out_label %}
+                    <span class="px-2 py-1 text-xs rounded-full bg-orange-100 text-orange-700">{{ out_label }}</span>
+                    {% elif 'Undertime' in out_label %}
+                    <span class="px-2 py-1 text-xs rounded-full bg-red-100 text-red-700">{{ out_label }}</span>
                     {% else %}
-                    <span class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-700">{{ out_purpose }}</span>
+                    <span class="px-2 py-1 text-xs rounded-full bg-gray-200 text-gray-700">{{ out_label }}</span>
                     {% endif %}
                     {% else %}
                     <span class="text-yellow-500"><i class="fas fa-clock"></i> Active</span>

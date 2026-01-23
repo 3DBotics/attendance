@@ -516,6 +516,18 @@ class Attendance:
         }
         db_purpose = purpose_mapping.get(purpose, purpose)
         
+        # Create human-readable label from purpose
+        purpose_label_mapping = {
+            'clock_in': 'Clock In',
+            'lunch_break_in': 'Lunch Break - In',
+            'snack_break_in': 'Snack Break - In',
+            'emergency_in': 'Emergency - In',
+            'early_start': 'Early Start',
+            'remote_field': 'Remote Field',
+            'official_overtime': 'Official Overtime'
+        }
+        purpose_label = purpose_label_mapping.get(purpose, purpose.replace('_', ' ').title())
+        
         cursor.execute("SELECT date FROM holidays WHERE date = %s", (today,))
         holiday = cursor.fetchone()
         is_holiday = True if holiday else False
@@ -525,10 +537,10 @@ class Attendance:
             holiday_type = cursor.fetchone()['type']
         
         cursor.execute('''
-            INSERT INTO attendance (employee_id, date, time_in, time_in_photo, time_in_purpose, tardiness_minutes, is_holiday, holiday_type, early_start_approved, early_start_minutes, is_remote_field, remote_field_hours)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO attendance (employee_id, date, time_in, time_in_photo, time_in_purpose, time_in_purpose_label, tardiness_minutes, is_holiday, holiday_type, early_start_approved, early_start_minutes, is_remote_field, remote_field_hours)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING id
-        ''', (employee_id, today, now.isoformat(), photo_path, db_purpose, tardiness_minutes, is_holiday, holiday_type, is_early_start_approved, early_start_minutes, 1 if is_remote_field else 0, remote_field_hours))
+        ''', (employee_id, today, now.isoformat(), photo_path, db_purpose, purpose_label, tardiness_minutes, is_holiday, holiday_type, is_early_start_approved, early_start_minutes, 1 if is_remote_field else 0, remote_field_hours))
         result = cursor.fetchone()
         conn.commit()
         record_id = result['id']
@@ -604,13 +616,23 @@ class Attendance:
         }
         db_purpose = purpose_mapping.get(purpose, purpose)
         
+        # Create human-readable label from purpose
+        purpose_label_mapping = {
+            'clock_out': 'Clock Out',
+            'lunch_break_out': 'Lunch Break - Out',
+            'snack_break_out': 'Snack Break - Out',
+            'emergency_out': 'Emergency - Out',
+            'unapproved_undertime_out': 'Unapproved Undertime'
+        }
+        purpose_label = purpose_label_mapping.get(purpose, purpose.replace('_', ' ').title())
+        
         cursor.execute('''
             UPDATE attendance 
-            SET time_out = %s, time_out_photo = %s, time_out_purpose = %s, undertime_minutes = %s, 
+            SET time_out = %s, time_out_photo = %s, time_out_purpose = %s, time_out_purpose_label = %s, undertime_minutes = %s, 
                 official_overtime_approved = %s, official_overtime_minutes = %s,
                 requires_admin_review = %s, admin_review_reason = %s
             WHERE id = %s
-        ''', (now.isoformat(), photo_path, db_purpose, undertime_minutes, is_official_overtime_approved, 
+        ''', (now.isoformat(), photo_path, db_purpose, purpose_label, undertime_minutes, is_official_overtime_approved, 
               official_overtime_minutes, requires_admin_review, admin_review_reason, open_record['id']))
         conn.commit()
         conn.close()
