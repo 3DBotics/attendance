@@ -456,7 +456,6 @@ class Attendance:
     
     @staticmethod
     def calculate_daily_metrics(employee_id, target_date):
-        from datetime import datetime, timedelta
         
         # 1. Get Employee Details
         emp = Employee.get_by_id(employee_id)
@@ -611,7 +610,6 @@ class Attendance:
 
     @staticmethod
     def get_summary_by_date_range(start_date, end_date, employee_id=None):
-        from datetime import date, timedelta
         
         # 1. Get list of employees
         if employee_id:
