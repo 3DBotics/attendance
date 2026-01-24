@@ -347,6 +347,57 @@ def edit_employee(emp_id):
         date_hired=data.get('date_hired') or None,
         position=data.get('position') or None
     )
+    
+    # Update employee schedule
+    schedule_data = {
+        'sunday_is_working': data.get('sunday_is_working') == 'on',
+        'sunday_start_time': data.get('sunday_start_time') if data.get('sunday_is_working') else None,
+        'sunday_end_time': data.get('sunday_end_time') if data.get('sunday_is_working') else None,
+        'monday_is_working': data.get('monday_is_working') == 'on',
+        'monday_start_time': data.get('monday_start_time') if data.get('monday_is_working') else None,
+        'monday_end_time': data.get('monday_end_time') if data.get('monday_is_working') else None,
+        'tuesday_is_working': data.get('tuesday_is_working') == 'on',
+        'tuesday_start_time': data.get('tuesday_start_time') if data.get('tuesday_is_working') else None,
+        'tuesday_end_time': data.get('tuesday_end_time') if data.get('tuesday_is_working') else None,
+        'wednesday_is_working': data.get('wednesday_is_working') == 'on',
+        'wednesday_start_time': data.get('wednesday_start_time') if data.get('wednesday_is_working') else None,
+        'wednesday_end_time': data.get('wednesday_end_time') if data.get('wednesday_is_working') else None,
+        'thursday_is_working': data.get('thursday_is_working') == 'on',
+        'thursday_start_time': data.get('thursday_start_time') if data.get('thursday_is_working') else None,
+        'thursday_end_time': data.get('thursday_end_time') if data.get('thursday_is_working') else None,
+        'friday_is_working': data.get('friday_is_working') == 'on',
+        'friday_start_time': data.get('friday_start_time') if data.get('friday_is_working') else None,
+        'friday_end_time': data.get('friday_end_time') if data.get('friday_is_working') else None,
+        'saturday_is_working': data.get('saturday_is_working') == 'on',
+        'saturday_start_time': data.get('saturday_start_time') if data.get('saturday_is_working') else None,
+        'saturday_end_time': data.get('saturday_end_time') if data.get('saturday_is_working') else None,
+    }
+    
+    effective_from = data.get('schedule_effective_from')
+    if effective_from:
+        effective_from = datetime.strptime(effective_from, '%Y-%m-%d').date()
+    else:
+        effective_from = date.today()
+    
+    # Check if schedule has actually changed before creating a new history record
+    current_schedule = EmployeeSchedule.get_active_schedule(emp_id)
+    schedule_changed = False
+    if not current_schedule:
+        schedule_changed = True
+    else:
+        for key, value in schedule_data.items():
+            if current_schedule.get(key) != value:
+                schedule_changed = True
+                break
+    
+    if schedule_changed:
+        EmployeeSchedule.create_schedule(
+            emp_id,
+            schedule_data,
+            effective_from=effective_from,
+            created_by=session.get('admin_id')
+        )
+    
     ActivityLog.log(session['admin_id'], session['admin_name'], 'UPDATE', 'employee', emp_id, f"Updated employee {data['first_name']} {data['last_name']}", request.remote_addr)
     flash('Employee updated successfully', 'success')
     return redirect(url_for('admin_employees'))
@@ -357,12 +408,15 @@ def get_employee_json(emp_id):
     from flask import jsonify
     try:
         emp = Employee.get_by_id(emp_id)
-        if not emp:
-            return jsonify({'error': 'Employee not found'}), 404
-        
-        conn = get_db()
-        cursor = get_cursor(conn)
-        cursor.execute('SELECT name FROM branches WHERE id = %s', (emp['branch_id'],))
+        if emp:
+            schedule = EmployeeSchedule.get_active_schedule(emp_id)
+            return jsonify({
+                'employee': emp,
+                'schedule': schedule
+            })
+        return jsonify({'error': 'Employee not found'}), 404
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500ELECT name FROM branches WHERE id = %s', (emp['branch_id'],))
         branch = cursor.fetchone()
         conn.close()
         
