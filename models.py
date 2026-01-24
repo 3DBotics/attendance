@@ -453,6 +453,211 @@ class Employee:
         return False
 
 class Attendance:
+    
+    @staticmethod
+    def calculate_daily_metrics(employee_id, target_date):
+        from datetime import datetime, timedelta
+        
+        # 1. Get Employee Details
+        emp = Employee.get_by_id(employee_id)
+        if not emp:
+            return None
+
+        # 2. Get Schedule for the day
+        schedule = EmployeeSchedule.get_active_schedule_for_date(employee_id, target_date)
+        
+        # Default metrics
+        metrics = {
+            'date': target_date.isoformat(),
+            'is_working_day': False,
+            'is_present': False,
+            'scheduled_start': None,
+            'scheduled_end': None,
+            'total_work_minutes': 0,
+            'tardiness_minutes': 0,
+            'undertime_minutes': 0,
+            'overtime_minutes': 0,
+            'daily_rate': emp['daily_rate'],
+            'daily_pay': 0.0,
+            'is_holiday': False,
+            'holiday_type': None,
+            'records': []
+        }
+
+        if not schedule or not schedule[f'{target_date.strftime("%A").lower()}_is_working']:
+            return metrics # Not a scheduled working day
+
+        metrics['is_working_day'] = True
+        
+        # Get scheduled times
+        start_time_str = schedule[f'{target_date.strftime("%A").lower()}_start_time']
+        end_time_str = schedule[f'{target_date.strftime("%A").lower()}_end_time']
+        
+        if not start_time_str or not end_time_str:
+            # Should not happen if is_working is true, but as a safeguard
+            return metrics 
+            
+        metrics['scheduled_start'] = start_time_str.strftime('%H:%M')
+        metrics['scheduled_end'] = end_time_str.strftime('%H:%M')
+        
+        # Convert scheduled times to datetime objects for calculation
+        scheduled_start = datetime.combine(target_date, start_time_str)
+        scheduled_end = datetime.combine(target_date, end_time_str)
+        
+        # Handle night shift (end time is on the next day)
+        if scheduled_end < scheduled_start:
+            scheduled_end += timedelta(days=1)
+            
+        # 3. Get Attendance Records for the day
+        conn = get_db()
+        cursor = get_cursor(conn)
+        cursor.execute('''
+            SELECT * FROM attendance 
+            WHERE employee_id = %s AND date = %s
+            ORDER BY time_in
+        ''', (employee_id, target_date.isoformat()))
+        records = cursor.fetchall()
+        conn.close()
+        
+        metrics['records'] = records
+        
+        if not records:
+            # Absent day
+            return metrics
+
+        metrics['is_present'] = True
+        
+        total_work_duration = timedelta()
+        total_tardiness = timedelta()
+        total_undertime = timedelta()
+        total_overtime = timedelta()
+        
+        # 4. Calculate Metrics from Records
+        for record in records:
+            time_in = datetime.fromisoformat(record['time_in'])
+            time_out = datetime.fromisoformat(record['time_out']) if record['time_out'] else None
+            
+            if time_out:
+                # Work duration for this segment
+                segment_duration = time_out - time_in
+                total_work_duration += segment_duration
+                
+                # Tardiness/Undertime/Overtime are already calculated in time_in/time_out
+                # We'll aggregate the minutes from the records
+                metrics['tardiness_minutes'] += record['tardiness_minutes'] or 0
+                metrics['undertime_minutes'] += record['undertime_minutes'] or 0
+                metrics['overtime_minutes'] += record['official_overtime_minutes'] or 0
+        
+        metrics['total_work_minutes'] = int(total_work_duration.total_seconds() / 60)
+        
+        # 5. Calculate Daily Pay (Simplified for now, full payroll logic is Phase 3)
+        # Base pay is daily_rate for a full day's work (8 hours = 480 minutes)
+        # This is a placeholder. Full payroll logic will be implemented in Phase 3.
+        
+        # Assuming 8 hours (480 minutes) is the standard for daily_rate
+        STANDARD_WORK_MINUTES = 480
+        
+        # Calculate minutes to be paid
+        paid_minutes = metrics['total_work_minutes']
+        
+        # Apply tardiness/undertime deduction (simplistic: deduct minutes)
+        # In a real system, this is more complex (e.g., no pay for first 3 minutes of tardiness)
+        # For now, we'll use the total work minutes as the basis.
+        
+        # Calculate base pay
+        base_pay = emp['daily_rate']
+        
+        # Simple calculation: If worked less than standard, prorate. If worked more, add overtime.
+        if metrics['total_work_minutes'] < STANDARD_WORK_MINUTES:
+            # Prorated pay for undertime/absence
+            daily_pay = (metrics['total_work_minutes'] / STANDARD_WORK_MINUTES) * base_pay
+        else:
+            # Full base pay
+            daily_pay = base_pay
+            
+            # Add overtime pay (assuming 1.25x rate for simplicity)
+            overtime_minutes = metrics['total_work_minutes'] - STANDARD_WORK_MINUTES
+            overtime_rate_per_minute = (base_pay / STANDARD_WORK_MINUTES) * 1.25
+            overtime_pay = overtime_minutes * overtime_rate_per_minute
+            daily_pay += overtime_pay
+            
+        metrics['daily_pay'] = round(daily_pay, 2)
+        
+        # 6. Check for Holiday
+        cursor.execute("SELECT * FROM holidays WHERE date = %s", (target_date.isoformat(),))
+        holiday = cursor.fetchone()
+        if holiday:
+            metrics['is_holiday'] = True
+            metrics['holiday_type'] = holiday['type']
+            # Holiday pay logic will be fully implemented in Phase 3
+            # For now, assume regular pay if worked, 0 if absent
+            
+        return metrics
+
+    @staticmethod
+    def get_summary_by_date_range(start_date, end_date, employee_id=None):
+        from datetime import date, timedelta
+        
+        # 1. Get list of employees
+        if employee_id:
+            employees = [Employee.get_by_id(employee_id)]
+        else:
+            employees = Employee.get_active()
+            
+        if not employees:
+            return []
+            
+        # 2. Generate list of dates
+        date_list = []
+        current_date = start_date
+        while current_date <= end_date:
+            date_list.append(current_date)
+            current_date += timedelta(days=1)
+            
+        # 3. Aggregate metrics for each employee
+        summary_list = []
+        for emp in employees:
+            emp_summary = {
+                'employee_id': emp['id'],
+                'employee_name': f"{emp['first_name']} {emp['last_name']}",
+                'employee_code': emp['employee_id'],
+                'total_days': len(date_list),
+                'working_days_scheduled': 0,
+                'days_present': 0,
+                'days_absent': 0,
+                'total_work_minutes': 0,
+                'total_tardiness_minutes': 0,
+                'total_undertime_minutes': 0,
+                'total_overtime_minutes': 0,
+                'total_pay': 0.0,
+                'daily_metrics': []
+            }
+            
+            for d in date_list:
+                daily_metrics = Attendance.calculate_daily_metrics(emp['id'], d)
+                if daily_metrics:
+                    emp_summary['daily_metrics'].append(daily_metrics)
+                    
+                    if daily_metrics['is_working_day']:
+                        emp_summary['working_days_scheduled'] += 1
+                        
+                        if daily_metrics['is_present']:
+                            emp_summary['days_present'] += 1
+                        else:
+                            emp_summary['days_absent'] += 1
+                            
+                        emp_summary['total_work_minutes'] += daily_metrics['total_work_minutes']
+                        emp_summary['total_tardiness_minutes'] += daily_metrics['tardiness_minutes']
+                        emp_summary['total_undertime_minutes'] += daily_metrics['undertime_minutes']
+                        emp_summary['total_overtime_minutes'] += daily_metrics['overtime_minutes']
+                        emp_summary['total_pay'] += daily_metrics['daily_pay']
+                        
+            emp_summary['total_pay'] = round(emp_summary['total_pay'], 2)
+            summary_list.append(emp_summary)
+            
+        return summary_list
+
+    @staticmethod
     @staticmethod
     def time_in(employee_id, photo_path, purpose='clock_in', early_start_approved=False, early_start_code=None, is_remote_field=False, remote_field_hours=0):
         conn = get_db()
@@ -1588,32 +1793,31 @@ class EmployeeSchedule:
             print(f"Error creating schedule: {e}")
             return None
     
+        return schedule
+    
     @staticmethod
-    def get_active_schedule(employee_id, as_of_date=None):
+    def get_active_schedule_for_date(employee_id, target_date):
         """
         Get the active schedule for an employee on a specific date
         
         Args:
             employee_id: ID of the employee
-            as_of_date: Date to check (defaults to today)
-        
+            target_date: The date to check the schedule for (datetime.date object)
+            
         Returns:
-            Schedule dict or None if no schedule found
+            Dict of schedule data or None
         """
         conn = get_db()
         cursor = get_cursor(conn)
         
-        if as_of_date is None:
-            as_of_date = date.today()
-        
         cursor.execute('''
-            SELECT * FROM employee_schedules
+            SELECT * FROM employee_schedules 
             WHERE employee_id = %s 
-            AND effective_from <= %s
+            AND effective_from <= %s 
             AND (effective_to IS NULL OR effective_to >= %s)
             ORDER BY effective_from DESC
             LIMIT 1
-        ''', (employee_id, as_of_date, as_of_date))
+        ''', (employee_id, target_date.isoformat(), target_date.isoformat()))
         
         schedule = cursor.fetchone()
         conn.close()

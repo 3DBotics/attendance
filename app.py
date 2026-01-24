@@ -488,43 +488,58 @@ def resign_employee(emp_id):
 @app.route('/admin/attendance')
 @login_required
 def admin_attendance():
+    from datetime import datetime, date, timedelta
+    
     employees = Employee.get_all()
     today = get_manila_now().strftime('%Y-%m-%d')
     
     date_from = request.args.get('date_from', today)
     date_to = request.args.get('date_to', today)
     employee_filter = request.args.get('employee_id', '')
+    view_mode = request.args.get('view', 'summary')
     
-    conn = get_db()
-    cursor = get_cursor(conn)
+    date_from_obj = datetime.strptime(date_from, '%Y-%m-%d').date()
+    date_to_obj = datetime.strptime(date_to, '%Y-%m-%d').date()
     
     if employee_filter:
-        cursor.execute('''
-            SELECT a.*, e.first_name, e.last_name, e.employee_id as emp_code
-            FROM attendance a
-            JOIN employees e ON a.employee_id = e.id
-            WHERE a.date BETWEEN %s AND %s AND a.employee_id = %s
-            ORDER BY a.date DESC, a.time_in DESC
-        ''', (date_from, date_to, employee_filter))
+        summary_data = Attendance.get_summary_by_date_range(date_from_obj, date_to_obj, int(employee_filter))
     else:
-        cursor.execute('''
-            SELECT a.*, e.first_name, e.last_name, e.employee_id as emp_code
-            FROM attendance a
-            JOIN employees e ON a.employee_id = e.id
-            WHERE a.date BETWEEN %s AND %s
-            ORDER BY a.date DESC, a.time_in DESC
-        ''', (date_from, date_to))
+        summary_data = Attendance.get_summary_by_date_range(date_from_obj, date_to_obj)
     
-    attendance_records = cursor.fetchall()
-    conn.close()
+    attendance_records = []
+    if view_mode == 'detail':
+        conn = get_db()
+        cursor = get_cursor(conn)
+        
+        if employee_filter:
+            cursor.execute('''
+                SELECT a.*, e.first_name, e.last_name, e.employee_id as emp_code
+                FROM attendance a
+                JOIN employees e ON a.employee_id = e.id
+                WHERE a.date BETWEEN %s AND %s AND a.employee_id = %s
+                ORDER BY a.date DESC, a.time_in DESC
+            ''', (date_from, date_to, employee_filter))
+        else:
+            cursor.execute('''
+                SELECT a.*, e.first_name, e.last_name, e.employee_id as emp_code
+                FROM attendance a
+                JOIN employees e ON a.employee_id = e.id
+                WHERE a.date BETWEEN %s AND %s
+                ORDER BY a.date DESC, a.time_in DESC
+            ''', (date_from, date_to))
+        
+        attendance_records = cursor.fetchall()
+        conn.close()
     
     return render_template('admin/attendance.html', 
                          employees=employees, 
                          attendance=attendance_records,
+                         summary_data=summary_data,
                          today=today,
                          date_from=date_from,
                          date_to=date_to,
-                         employee_filter=employee_filter)
+                         employee_filter=employee_filter,
+                         view_mode=view_mode)
 
 @app.route('/admin/attendance/overtime', methods=['POST'])
 @master_admin_required
