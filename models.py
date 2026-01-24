@@ -500,6 +500,21 @@ class Attendance:
         metrics['scheduled_start'] = start_time_str.strftime('%H:%M')
         metrics['scheduled_end'] = end_time_str.strftime('%H:%M')
         
+        # Ensure scheduled times are datetime.time objects
+        # Time objects from DB are already datetime.time, but if they are strings (e.g. from migration), convert them
+        if isinstance(start_time_str, str):
+            # Check if it's a full time string (e.g., '08:00:00') or just time (e.g., '08:00')
+            try:
+                start_time_str = datetime.strptime(start_time_str, '%H:%M:%S').time()
+            except ValueError:
+                start_time_str = datetime.strptime(start_time_str, '%H:%M').time()
+                
+        if isinstance(end_time_str, str):
+            try:
+                end_time_str = datetime.strptime(end_time_str, '%H:%M:%S').time()
+            except ValueError:
+                end_time_str = datetime.strptime(end_time_str, '%H:%M').time()
+            
         # Convert scheduled times to datetime objects for calculation
         scheduled_start = datetime.combine(target_date, start_time_str)
         scheduled_end = datetime.combine(target_date, end_time_str)
