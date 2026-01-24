@@ -1812,6 +1812,21 @@ class EmployeeSchedule:
         return schedule
     
     @staticmethod
+    def get_active_schedule(employee_id):
+        """
+        Get the currently active schedule for an employee (as of today)
+        
+        Args:
+            employee_id: ID of the employee
+            
+        Returns:
+            Dict of schedule data or None
+        """
+        from datetime import date
+        today = date.today()
+        return EmployeeSchedule.get_active_schedule_for_date(employee_id, today)
+    
+    @staticmethod
     def get_active_schedule_for_date(employee_id, target_date):
         """
         Get the active schedule for an employee on a specific date
