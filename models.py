@@ -1506,3 +1506,171 @@ class ActivityLog:
         logs = cursor.fetchall()
         conn.close()
         return logs
+
+
+class EmployeeSchedule:
+    """Manages employee work schedules with day-by-day configuration and history tracking"""
+    
+    @staticmethod
+    def create_schedule(employee_id, schedule_data, effective_from=None, created_by=None):
+        """
+        Create a new schedule for an employee
+        
+        Args:
+            employee_id: ID of the employee
+            schedule_data: Dict containing schedule for each day (e.g., {'monday_is_working': True, 'monday_start_time': '08:00', ...})
+            effective_from: Date when this schedule becomes effective (defaults to today)
+            created_by: Admin ID who created this schedule
+        
+        Returns:
+            Schedule ID if successful, None otherwise
+        """
+        conn = get_db()
+        cursor = get_cursor(conn)
+        
+        if effective_from is None:
+            effective_from = date.today()
+        
+        try:
+            # Close any existing current schedule (set effective_to to day before new schedule starts)
+            cursor.execute('''
+                UPDATE employee_schedules 
+                SET effective_to = %s 
+                WHERE employee_id = %s AND effective_to IS NULL
+            ''', (effective_from - timedelta(days=1), employee_id))
+            
+            # Insert new schedule
+            cursor.execute('''
+                INSERT INTO employee_schedules (
+                    employee_id, effective_from, effective_to, created_by,
+                    sunday_is_working, sunday_start_time, sunday_end_time,
+                    monday_is_working, monday_start_time, monday_end_time,
+                    tuesday_is_working, tuesday_start_time, tuesday_end_time,
+                    wednesday_is_working, wednesday_start_time, wednesday_end_time,
+                    thursday_is_working, thursday_start_time, thursday_end_time,
+                    friday_is_working, friday_start_time, friday_end_time,
+                    saturday_is_working, saturday_start_time, saturday_end_time
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING id
+            ''', (
+                employee_id, effective_from, None, created_by,
+                schedule_data.get('sunday_is_working', False),
+                schedule_data.get('sunday_start_time'),
+                schedule_data.get('sunday_end_time'),
+                schedule_data.get('monday_is_working', True),
+                schedule_data.get('monday_start_time', '08:00'),
+                schedule_data.get('monday_end_time', '17:00'),
+                schedule_data.get('tuesday_is_working', True),
+                schedule_data.get('tuesday_start_time', '08:00'),
+                schedule_data.get('tuesday_end_time', '17:00'),
+                schedule_data.get('wednesday_is_working', True),
+                schedule_data.get('wednesday_start_time', '08:00'),
+                schedule_data.get('wednesday_end_time', '17:00'),
+                schedule_data.get('thursday_is_working', True),
+                schedule_data.get('thursday_start_time', '08:00'),
+                schedule_data.get('thursday_end_time', '17:00'),
+                schedule_data.get('friday_is_working', True),
+                schedule_data.get('friday_start_time', '08:00'),
+                schedule_data.get('friday_end_time', '17:00'),
+                schedule_data.get('saturday_is_working', True),
+                schedule_data.get('saturday_start_time', '08:00'),
+                schedule_data.get('saturday_end_time', '17:00')
+            ))
+            
+            result = cursor.fetchone()
+            conn.commit()
+            conn.close()
+            return result['id']
+        except Exception as e:
+            conn.rollback()
+            conn.close()
+            print(f"Error creating schedule: {e}")
+            return None
+    
+    @staticmethod
+    def get_active_schedule(employee_id, as_of_date=None):
+        """
+        Get the active schedule for an employee on a specific date
+        
+        Args:
+            employee_id: ID of the employee
+            as_of_date: Date to check (defaults to today)
+        
+        Returns:
+            Schedule dict or None if no schedule found
+        """
+        conn = get_db()
+        cursor = get_cursor(conn)
+        
+        if as_of_date is None:
+            as_of_date = date.today()
+        
+        cursor.execute('''
+            SELECT * FROM employee_schedules
+            WHERE employee_id = %s 
+            AND effective_from <= %s
+            AND (effective_to IS NULL OR effective_to >= %s)
+            ORDER BY effective_from DESC
+            LIMIT 1
+        ''', (employee_id, as_of_date, as_of_date))
+        
+        schedule = cursor.fetchone()
+        conn.close()
+        return schedule
+    
+    @staticmethod
+    def get_schedule_for_day(employee_id, target_date):
+        """
+        Get the schedule configuration for a specific day
+        
+        Args:
+            employee_id: ID of the employee
+            target_date: Date to check
+        
+        Returns:
+            Dict with keys: is_working, start_time, end_time, or None if no schedule
+        """
+        schedule = EmployeeSchedule.get_active_schedule(employee_id, target_date)
+        if not schedule:
+            return None
+        
+        # Get day of week (0=Monday, 6=Sunday in Python, but we need 0=Sunday for our schema)
+        day_of_week = target_date.weekday()
+        # Convert Python weekday to our format (0=Sunday)
+        day_index = (day_of_week + 1) % 7
+        
+        day_names = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
+        day_name = day_names[day_index]
+        
+        return {
+            'is_working': schedule.get(f'{day_name}_is_working', False),
+            'start_time': schedule.get(f'{day_name}_start_time'),
+            'end_time': schedule.get(f'{day_name}_end_time')
+        }
+    
+    @staticmethod
+    def get_schedule_history(employee_id):
+        """
+        Get all schedule history for an employee
+        
+        Args:
+            employee_id: ID of the employee
+        
+        Returns:
+            List of schedule dicts ordered by effective_from DESC
+        """
+        conn = get_db()
+        cursor = get_cursor(conn)
+        
+        cursor.execute('''
+            SELECT s.*, a.full_name as created_by_name
+            FROM employee_schedules s
+            LEFT JOIN admins a ON s.created_by = a.id
+            WHERE s.employee_id = %s
+            ORDER BY s.effective_from DESC
+        ''', (employee_id,))
+        
+        schedules = cursor.fetchall()
+        conn.close()
+        return schedules

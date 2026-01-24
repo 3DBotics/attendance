@@ -167,15 +167,153 @@
                             <input type="date" name="date_hired" class="mt-1 w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500">
                         </div>
                     </div>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">Start Time (Shift) *</label>
-                            <input type="time" name="start_time" value="08:00" required class="mt-1 w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500">
+                    <h3 class="font-semibold text-teal-700 border-b pb-2 pt-4">Weekly Schedule</h3>
+                    <p class="text-sm text-gray-600 mb-4">Configure working days and hours for each day of the week. Uncheck days that are rest days.</p>
+                    
+                    <!-- Sunday -->
+                    <div class="border rounded-lg p-3 mb-3">
+                        <div class="flex items-center justify-between mb-2">
+                            <label class="flex items-center">
+                                <input type="checkbox" name="sunday_is_working" class="mr-2 w-4 h-4 text-teal-600 rounded focus:ring-2 focus:ring-teal-500">
+                                <span class="font-medium text-gray-700">Sunday</span>
+                            </label>
                         </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">End Time (Shift) *</label>
-                            <input type="time" name="end_time" value="17:00" required class="mt-1 w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500">
+                        <div class="grid grid-cols-2 gap-3 sunday-times" style="display: none;">
+                            <div>
+                                <label class="block text-xs text-gray-600">Start Time</label>
+                                <input type="time" name="sunday_start_time" value="08:00" class="mt-1 w-full px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-teal-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-600">End Time</label>
+                                <input type="time" name="sunday_end_time" value="17:00" class="mt-1 w-full px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-teal-500">
+                            </div>
                         </div>
+                    </div>
+                    
+                    <!-- Monday -->
+                    <div class="border rounded-lg p-3 mb-3">
+                        <div class="flex items-center justify-between mb-2">
+                            <label class="flex items-center">
+                                <input type="checkbox" name="monday_is_working" checked class="mr-2 w-4 h-4 text-teal-600 rounded focus:ring-2 focus:ring-teal-500">
+                                <span class="font-medium text-gray-700">Monday</span>
+                            </label>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3 monday-times">
+                            <div>
+                                <label class="block text-xs text-gray-600">Start Time</label>
+                                <input type="time" name="monday_start_time" value="08:00" class="mt-1 w-full px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-teal-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-600">End Time</label>
+                                <input type="time" name="monday_end_time" value="17:00" class="mt-1 w-full px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-teal-500">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Tuesday -->
+                    <div class="border rounded-lg p-3 mb-3">
+                        <div class="flex items-center justify-between mb-2">
+                            <label class="flex items-center">
+                                <input type="checkbox" name="tuesday_is_working" checked class="mr-2 w-4 h-4 text-teal-600 rounded focus:ring-2 focus:ring-teal-500">
+                                <span class="font-medium text-gray-700">Tuesday</span>
+                            </label>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3 tuesday-times">
+                            <div>
+                                <label class="block text-xs text-gray-600">Start Time</label>
+                                <input type="time" name="tuesday_start_time" value="08:00" class="mt-1 w-full px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-teal-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-600">End Time</label>
+                                <input type="time" name="tuesday_end_time" value="17:00" class="mt-1 w-full px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-teal-500">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Wednesday -->
+                    <div class="border rounded-lg p-3 mb-3">
+                        <div class="flex items-center justify-between mb-2">
+                            <label class="flex items-center">
+                                <input type="checkbox" name="wednesday_is_working" checked class="mr-2 w-4 h-4 text-teal-600 rounded focus:ring-2 focus:ring-teal-500">
+                                <span class="font-medium text-gray-700">Wednesday</span>
+                            </label>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3 wednesday-times">
+                            <div>
+                                <label class="block text-xs text-gray-600">Start Time</label>
+                                <input type="time" name="wednesday_start_time" value="08:00" class="mt-1 w-full px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-teal-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-600">End Time</label>
+                                <input type="time" name="wednesday_end_time" value="17:00" class="mt-1 w-full px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-teal-500">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Thursday -->
+                    <div class="border rounded-lg p-3 mb-3">
+                        <div class="flex items-center justify-between mb-2">
+                            <label class="flex items-center">
+                                <input type="checkbox" name="thursday_is_working" checked class="mr-2 w-4 h-4 text-teal-600 rounded focus:ring-2 focus:ring-teal-500">
+                                <span class="font-medium text-gray-700">Thursday</span>
+                            </label>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3 thursday-times">
+                            <div>
+                                <label class="block text-xs text-gray-600">Start Time</label>
+                                <input type="time" name="thursday_start_time" value="08:00" class="mt-1 w-full px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-teal-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-600">End Time</label>
+                                <input type="time" name="thursday_end_time" value="17:00" class="mt-1 w-full px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-teal-500">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Friday -->
+                    <div class="border rounded-lg p-3 mb-3">
+                        <div class="flex items-center justify-between mb-2">
+                            <label class="flex items-center">
+                                <input type="checkbox" name="friday_is_working" checked class="mr-2 w-4 h-4 text-teal-600 rounded focus:ring-2 focus:ring-teal-500">
+                                <span class="font-medium text-gray-700">Friday</span>
+                            </label>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3 friday-times">
+                            <div>
+                                <label class="block text-xs text-gray-600">Start Time</label>
+                                <input type="time" name="friday_start_time" value="08:00" class="mt-1 w-full px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-teal-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-600">End Time</label>
+                                <input type="time" name="friday_end_time" value="17:00" class="mt-1 w-full px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-teal-500">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Saturday -->
+                    <div class="border rounded-lg p-3 mb-3">
+                        <div class="flex items-center justify-between mb-2">
+                            <label class="flex items-center">
+                                <input type="checkbox" name="saturday_is_working" checked class="mr-2 w-4 h-4 text-teal-600 rounded focus:ring-2 focus:ring-teal-500">
+                                <span class="font-medium text-gray-700">Saturday</span>
+                            </label>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3 saturday-times">
+                            <div>
+                                <label class="block text-xs text-gray-600">Start Time</label>
+                                <input type="time" name="saturday_start_time" value="08:00" class="mt-1 w-full px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-teal-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-600">End Time</label>
+                                <input type="time" name="saturday_end_time" value="17:00" class="mt-1 w-full px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-teal-500">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <label class="block text-sm font-medium text-gray-700">Schedule Effective From</label>
+                        <input type="date" name="schedule_effective_from" value="{{ today }}" class="mt-1 w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500">
+                        <p class="text-xs text-gray-500 mt-1">This schedule will be effective from this date onwards</p>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700">PIN (4 digits) *</label>
@@ -719,6 +857,41 @@ function openStatusChange(id, name) {
     document.getElementById('statusSelect').value = '';
     document.getElementById('statusChangeModal').classList.remove('hidden');
 }
+
+// Toggle schedule time inputs based on checkbox state
+function setupScheduleToggles() {
+    const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    
+    days.forEach(day => {
+        const checkbox = document.querySelector(`input[name="${day}_is_working"]`);
+        if (checkbox) {
+            checkbox.addEventListener('change', function() {
+                const timesDiv = document.querySelector(`.${day}-times`);
+                if (timesDiv) {
+                    timesDiv.style.display = this.checked ? 'grid' : 'none';
+                    // Clear time values if unchecked
+                    if (!this.checked) {
+                        const startTime = document.querySelector(`input[name="${day}_start_time"]`);
+                        const endTime = document.querySelector(`input[name="${day}_end_time"]`);
+                        if (startTime) startTime.value = '';
+                        if (endTime) endTime.value = '';
+                    } else {
+                        // Set default times if checked
+                        const startTime = document.querySelector(`input[name="${day}_start_time"]`);
+                        const endTime = document.querySelector(`input[name="${day}_end_time"]`);
+                        if (startTime && !startTime.value) startTime.value = '08:00';
+                        if (endTime && !endTime.value) endTime.value = '17:00';
+                    }
+                }
+            });
+            // Trigger initial state
+            checkbox.dispatchEvent(new Event('change'));
+        }
+    });
+}
+
+// Initialize schedule toggles when page loads
+document.addEventListener('DOMContentLoaded', setupScheduleToggles);
 </script>
 {% endblock %}
 {% endblock %}

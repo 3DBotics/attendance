@@ -7,7 +7,7 @@ from flask import Flask, render_template, request, jsonify, redirect, url_for, f
 from models import (
     init_db, Employee, Attendance, StatutoryDeduction, 
     Holiday, Branch, Settings, PayrollPeriod, PayrollRecord, get_db, get_cursor, ActivityLog,
-    Admin, DatabaseManager, get_manila_now, AdminAuthCode
+    Admin, DatabaseManager, get_manila_now, AdminAuthCode, EmployeeSchedule
 )
 from pdf_payslip import generate_payslip_pdf
 import pytz
@@ -154,7 +154,8 @@ def admin_dashboard():
 def admin_employees():
     employees = Employee.get_all(include_resigned=True)
     branches = Branch.get_all()
-    return render_template('admin/employees.html', employees=employees, branches=branches, can_edit_delete=can_edit_delete())
+    today = date.today().strftime('%Y-%m-%d')
+    return render_template('admin/employees.html', employees=employees, branches=branches, can_edit_delete=can_edit_delete(), today=today)
 
 def validate_and_save_id_photo(photo_data, employee_id):
     import base64
@@ -260,6 +261,44 @@ def add_employee():
         position=data.get('position') or None
     )
     if result:
+        # Create employee schedule
+        schedule_data = {
+            'sunday_is_working': data.get('sunday_is_working') == 'on',
+            'sunday_start_time': data.get('sunday_start_time') if data.get('sunday_is_working') else None,
+            'sunday_end_time': data.get('sunday_end_time') if data.get('sunday_is_working') else None,
+            'monday_is_working': data.get('monday_is_working') == 'on',
+            'monday_start_time': data.get('monday_start_time') if data.get('monday_is_working') else None,
+            'monday_end_time': data.get('monday_end_time') if data.get('monday_is_working') else None,
+            'tuesday_is_working': data.get('tuesday_is_working') == 'on',
+            'tuesday_start_time': data.get('tuesday_start_time') if data.get('tuesday_is_working') else None,
+            'tuesday_end_time': data.get('tuesday_end_time') if data.get('tuesday_is_working') else None,
+            'wednesday_is_working': data.get('wednesday_is_working') == 'on',
+            'wednesday_start_time': data.get('wednesday_start_time') if data.get('wednesday_is_working') else None,
+            'wednesday_end_time': data.get('wednesday_end_time') if data.get('wednesday_is_working') else None,
+            'thursday_is_working': data.get('thursday_is_working') == 'on',
+            'thursday_start_time': data.get('thursday_start_time') if data.get('thursday_is_working') else None,
+            'thursday_end_time': data.get('thursday_end_time') if data.get('thursday_is_working') else None,
+            'friday_is_working': data.get('friday_is_working') == 'on',
+            'friday_start_time': data.get('friday_start_time') if data.get('friday_is_working') else None,
+            'friday_end_time': data.get('friday_end_time') if data.get('friday_is_working') else None,
+            'saturday_is_working': data.get('saturday_is_working') == 'on',
+            'saturday_start_time': data.get('saturday_start_time') if data.get('saturday_is_working') else None,
+            'saturday_end_time': data.get('saturday_end_time') if data.get('saturday_is_working') else None,
+        }
+        
+        effective_from = data.get('schedule_effective_from')
+        if effective_from:
+            effective_from = datetime.strptime(effective_from, '%Y-%m-%d').date()
+        else:
+            effective_from = date.today()
+        
+        EmployeeSchedule.create_schedule(
+            result,
+            schedule_data,
+            effective_from=effective_from,
+            created_by=session.get('admin_id')
+        )
+        
         ActivityLog.log(session['admin_id'], session['admin_name'], 'CREATE', 'employee', result, f"Added employee {data['first_name']} {data['last_name']}", request.remote_addr)
         flash('Employee added successfully', 'success')
     else:
