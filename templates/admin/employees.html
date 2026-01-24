@@ -881,7 +881,8 @@ function retakePhoto(prefix) {
 function viewEmployee(id) {
     fetch('/admin/employees/' + id + '/json')
         .then(response => response.json())
-        .then(emp => {
+        .then(data => {
+            const emp = data.employee;
             let html = `
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
