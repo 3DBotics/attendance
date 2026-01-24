@@ -1,4 +1,4 @@
-{% extends 'admin/base_admin.html' %}
+{% extends "admin/base.html" %}
 
 {% block title %}Attendance - 3DBotics Admin{% endblock %}
 
@@ -7,6 +7,7 @@
     <h1 class="text-3xl font-bold text-teal-800">Attendance Records</h1>
 </div>
 
+<!-- Filter Section -->
 <div class="bg-white rounded-xl shadow p-4 mb-6">
     <form method="GET" action="/admin/attendance" class="flex flex-wrap gap-4 items-end">
         <div>
@@ -37,6 +38,103 @@
     </form>
 </div>
 
+<!-- View Toggle -->
+<div class="flex gap-2 mb-4">
+    <a href="/admin/attendance?date_from={{ date_from }}&date_to={{ date_to }}&employee_id={{ employee_filter }}&view=summary" 
+       class="px-4 py-2 rounded-lg {% if view_mode == 'summary' %}bg-teal-600 text-white{% else %}bg-gray-200 text-gray-700 hover:bg-gray-300{% endif %}">
+        <i class="fas fa-chart-bar mr-1"></i> Summary View
+    </a>
+    <a href="/admin/attendance?date_from={{ date_from }}&date_to={{ date_to }}&employee_id={{ employee_filter }}&view=detail" 
+       class="px-4 py-2 rounded-lg {% if view_mode == 'detail' %}bg-teal-600 text-white{% else %}bg-gray-200 text-gray-700 hover:bg-gray-300{% endif %}">
+        <i class="fas fa-list mr-1"></i> Detail View
+    </a>
+</div>
+
+<!-- Summary View -->
+{% if view_mode == 'summary' %}
+<p class="text-sm text-gray-500 mb-4">Showing {{ summary_data|length }} employee(s) from {{ date_from }} to {{ date_to }}</p>
+
+<div class="bg-white rounded-xl shadow overflow-hidden">
+    <table class="w-full">
+        <thead class="bg-gray-50">
+            <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Employee</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Scheduled Days</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Days Present</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Days Absent</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Hours</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tardiness</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Undertime</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Overtime</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Pay</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200">
+            {% for emp_data in summary_data %}
+            <tr class="hover:bg-gray-50">
+                <td class="px-6 py-4">
+                    <div class="text-sm font-medium text-gray-900">{{ emp_data.employee_name }}</div>
+                    <div class="text-sm text-gray-500">{{ emp_data.employee_code }}</div>
+                </td>
+                <td class="px-6 py-4 text-sm text-gray-900 font-medium">{{ emp_data.working_days_scheduled }}</td>
+                <td class="px-6 py-4 text-sm">
+                    <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-700 font-medium">{{ emp_data.days_present }}</span>
+                </td>
+                <td class="px-6 py-4 text-sm">
+                    {% if emp_data.days_absent > 0 %}
+                    <span class="px-2 py-1 text-xs rounded-full bg-red-100 text-red-700 font-medium">{{ emp_data.days_absent }}</span>
+                    {% else %}
+                    <span class="text-gray-500">-</span>
+                    {% endif %}
+                </td>
+                <td class="px-6 py-4 text-sm text-gray-900 font-medium">
+                    {% set hours = (emp_data.total_work_minutes / 60)|int %}
+                    {% set minutes = emp_data.total_work_minutes % 60 %}
+                    {{ hours }}h {{ minutes }}m
+                </td>
+                <td class="px-6 py-4 text-sm">
+                    {% if emp_data.total_tardiness_minutes > 0 %}
+                    <span class="text-red-600 font-medium">{{ emp_data.total_tardiness_minutes }} mins</span>
+                    {% else %}
+                    <span class="text-gray-500">-</span>
+                    {% endif %}
+                </td>
+                <td class="px-6 py-4 text-sm">
+                    {% if emp_data.total_undertime_minutes > 0 %}
+                    <span class="text-orange-600 font-medium">{{ emp_data.total_undertime_minutes }} mins</span>
+                    {% else %}
+                    <span class="text-gray-500">-</span>
+                    {% endif %}
+                </td>
+                <td class="px-6 py-4 text-sm">
+                    {% if emp_data.total_overtime_minutes > 0 %}
+                    <span class="text-purple-600 font-medium">{{ emp_data.total_overtime_minutes }} mins</span>
+                    {% else %}
+                    <span class="text-gray-500">-</span>
+                    {% endif %}
+                </td>
+                <td class="px-6 py-4 text-sm font-bold text-teal-700">
+                    ₱{{ "%.2f"|format(emp_data.total_pay) }}
+                </td>
+                <td class="px-6 py-4 text-sm">
+                    <button onclick="viewEmployeeDetails({{ emp_data.employee_id }}, '{{ emp_data.employee_name }}')" 
+                            class="text-teal-600 hover:text-teal-800">
+                        <i class="fas fa-eye"></i> View
+                    </button>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="10" class="px-6 py-8 text-center text-gray-500">No attendance data found for selected date range</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Detail View -->
+{% else %}
 <p class="text-sm text-gray-500 mb-4">Showing {{ attendance|length }} record(s) from {{ date_from }} to {{ date_to }}</p>
 
 <div class="bg-white rounded-xl shadow overflow-hidden">
@@ -159,7 +257,9 @@
         </tbody>
     </table>
 </div>
+{% endif %}
 
+<!-- Overtime Approval Modal -->
 <div id="otModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
     <div class="bg-white rounded-xl p-6 w-full max-w-md">
         <h2 class="text-xl font-bold text-teal-800 mb-4">Approve Overtime</h2>
@@ -179,6 +279,7 @@
     </div>
 </div>
 
+<!-- Delete Modal -->
 <div id="deleteModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
     <div class="bg-white rounded-xl p-6 w-full max-w-md">
         <h2 class="text-xl font-bold text-red-600 mb-4"><i class="fas fa-exclamation-triangle mr-2"></i>Delete Attendance Record</h2>
@@ -199,16 +300,21 @@
 
 {% block scripts %}
 <script>
-function approveOT(id) {
-    document.getElementById('ot_attendance_id').value = id;
+function approveOT(attendanceId) {
+    document.getElementById('ot_attendance_id').value = attendanceId;
     document.getElementById('otModal').classList.remove('hidden');
 }
 
-function confirmDelete(id, name) {
-    document.getElementById('deleteForm').action = '/admin/attendance/' + id + '/delete';
-    document.getElementById('deleteName').textContent = name;
+function confirmDelete(attendanceId, employeeName) {
+    document.getElementById('deleteName').textContent = employeeName;
+    document.getElementById('deleteForm').action = '/admin/attendance/' + attendanceId + '/delete';
     document.getElementById('deleteModal').classList.remove('hidden');
 }
+
+function viewEmployeeDetails(employeeId, employeeName) {
+    const dateFrom = new URLSearchParams(window.location.search).get('date_from');
+    const dateTo = new URLSearchParams(window.location.search).get('date_to');
+    window.location.href = `/admin/attendance?date_from=${dateFrom}&date_to=${dateTo}&employee_id=${employeeId}&view=detail`;
+}
 </script>
-{% endblock %}
 {% endblock %}
