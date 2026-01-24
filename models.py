@@ -531,6 +531,11 @@ class Attendance:
             ORDER BY time_in
         ''', (employee_id, target_date.isoformat()))
         records = cursor.fetchall()
+        
+        # Also check for holidays while connection is open
+        cursor.execute("SELECT * FROM holidays WHERE date = %s", (target_date.isoformat(),))
+        holiday = cursor.fetchone()
+        
         conn.close()
         
         metrics['records'] = records
@@ -597,9 +602,7 @@ class Attendance:
             
         metrics['daily_pay'] = round(daily_pay, 2)
         
-        # 6. Check for Holiday
-        cursor.execute("SELECT * FROM holidays WHERE date = %s", (target_date.isoformat(),))
-        holiday = cursor.fetchone()
+        # 6. Check for Holiday (already fetched above)
         if holiday:
             metrics['is_holiday'] = True
             metrics['holiday_type'] = holiday['type']

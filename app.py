@@ -456,8 +456,21 @@ def admin_attendance():
     employee_filter = request.args.get('employee_id', '')
     view_mode = request.args.get('view', 'summary')
     
-    date_from_obj = datetime.strptime(date_from, '%Y-%m-%d').date()
-    date_to_obj = datetime.strptime(date_to, '%Y-%m-%d').date()
+    # Handle null or invalid dates
+    if not date_from or date_from == 'null' or date_from == 'None':
+        date_from = today
+    if not date_to or date_to == 'null' or date_to == 'None':
+        date_to = today
+    
+    try:
+        date_from_obj = datetime.strptime(date_from, '%Y-%m-%d').date()
+        date_to_obj = datetime.strptime(date_to, '%Y-%m-%d').date()
+    except ValueError:
+        # If date parsing fails, use today's date
+        date_from = today
+        date_to = today
+        date_from_obj = datetime.strptime(date_from, '%Y-%m-%d').date()
+        date_to_obj = datetime.strptime(date_to, '%Y-%m-%d').date()
     
     if employee_filter:
         summary_data = Attendance.get_summary_by_date_range(date_from_obj, date_to_obj, int(employee_filter))

@@ -312,8 +312,18 @@ function confirmDelete(attendanceId, employeeName) {
 }
 
 function viewEmployeeDetails(employeeId, employeeName) {
-    const dateFrom = new URLSearchParams(window.location.search).get('date_from');
-    const dateTo = new URLSearchParams(window.location.search).get('date_to');
+    const urlParams = new URLSearchParams(window.location.search);
+    let dateFrom = urlParams.get('date_from') || document.getElementById('date_from').value;
+    let dateTo = urlParams.get('date_to') || document.getElementById('date_to').value;
+    
+    // Fallback to today's date if still null
+    if (!dateFrom || dateFrom === 'null') {
+        dateFrom = new Date().toISOString().split('T')[0];
+    }
+    if (!dateTo || dateTo === 'null') {
+        dateTo = new Date().toISOString().split('T')[0];
+    }
+    
     window.location.href = `/admin/attendance?date_from=${dateFrom}&date_to=${dateTo}&employee_id=${employeeId}&view=detail`;
 }
 </script>
