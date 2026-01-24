@@ -406,17 +406,29 @@ def edit_employee(emp_id):
 @login_required
 def get_employee_json(emp_id):
     from flask import jsonify
-    from datetime import time
+    from datetime import time, date, datetime
     try:
         emp = Employee.get_by_id(emp_id)
         if emp:
             schedule = EmployeeSchedule.get_active_schedule(emp_id)
             
-            # Convert time objects to strings for JSON serialization
+            # Convert time and date objects to strings for JSON serialization
+            def serialize_value(value):
+                if isinstance(value, time):
+                    return value.strftime('%H:%M:%S')
+                elif isinstance(value, date):
+                    return value.isoformat()
+                elif isinstance(value, datetime):
+                    return value.isoformat()
+                return value
+            
+            # Serialize employee data
+            if emp:
+                emp = {k: serialize_value(v) for k, v in emp.items()}
+            
+            # Serialize schedule data
             if schedule:
-                for key, value in schedule.items():
-                    if isinstance(value, time):
-                        schedule[key] = value.strftime('%H:%M:%S')
+                schedule = {k: serialize_value(v) for k, v in schedule.items()}
             
             return jsonify({
                 'employee': emp,
