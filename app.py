@@ -416,49 +416,7 @@ def get_employee_json(emp_id):
             })
         return jsonify({'error': 'Employee not found'}), 404
     except Exception as e:
-        return jsonify({'error': str(e)}), 500ELECT name FROM branches WHERE id = %s', (emp['branch_id'],))
-        branch = cursor.fetchone()
-        conn.close()
-        
-        return jsonify({
-        'id': emp['id'],
-        'employee_id': emp['employee_id'],
-        'first_name': emp['first_name'],
-        'last_name': emp['last_name'],
-        'branch_id': emp['branch_id'],
-        'branch_name': branch['name'] if branch else None,
-        'daily_rate': float(emp['daily_rate']) if emp['daily_rate'] else 0,
-        'start_time': str(emp['start_time']) if emp['start_time'] else None,
-        'end_time': str(emp['end_time']) if emp['end_time'] else None,
-        'status': emp['status'] if 'status' in emp.keys() else ('resigned' if emp['is_resigned'] else 'active'),
-        'status_reason': emp['status_reason'] if 'status_reason' in emp.keys() else None,
-        'status_date': str(emp['status_date']) if 'status_date' in emp.keys() and emp['status_date'] else None,
-        'id_photo': emp['id_photo'] if 'id_photo' in emp.keys() else None,
-        'cv_file': emp['cv_file'] if 'cv_file' in emp.keys() else None,
-        'date_of_birth': str(emp['date_of_birth']) if 'date_of_birth' in emp.keys() and emp['date_of_birth'] else None,
-        'gender': emp['gender'] if 'gender' in emp.keys() else None,
-        'civil_status': emp['civil_status'] if 'civil_status' in emp.keys() else None,
-        'address': emp['address'] if 'address' in emp.keys() else None,
-        'phone': emp['phone'] if 'phone' in emp.keys() else None,
-        'email': emp['email'] if 'email' in emp.keys() else None,
-        'sss_number': emp['sss_number'] if 'sss_number' in emp.keys() else None,
-        'philhealth_number': emp['philhealth_number'] if 'philhealth_number' in emp.keys() else None,
-        'pagibig_number': emp['pagibig_number'] if 'pagibig_number' in emp.keys() else None,
-        'tin_number': emp['tin_number'] if 'tin_number' in emp.keys() else None,
-        'emergency_contact_name': emp['emergency_contact_name'] if 'emergency_contact_name' in emp.keys() else None,
-        'emergency_contact_phone': emp['emergency_contact_phone'] if 'emergency_contact_phone' in emp.keys() else None,
-        'emergency_contact_relationship': emp['emergency_contact_relationship'] if 'emergency_contact_relationship' in emp.keys() else None,
-        'reference_name': emp['reference_name'] if 'reference_name' in emp.keys() else None,
-        'reference_phone': emp['reference_phone'] if 'reference_phone' in emp.keys() else None,
-        'reference_company': emp['reference_company'] if 'reference_company' in emp.keys() else None,
-        'date_hired': str(emp['date_hired']) if 'date_hired' in emp.keys() and emp['date_hired'] else None,
-        'position': emp['position'] if 'position' in emp.keys() else None
-    })
-    except Exception as e:
-        import traceback
-        print(f"Error in get_employee_json: {str(e)}")
-        print(traceback.format_exc())
-        return jsonify({'error': f'Internal server error: {str(e)}'}), 500
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/admin/employees/<int:emp_id>/status', methods=['POST'])
 @master_admin_required
