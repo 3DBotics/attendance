@@ -415,7 +415,8 @@ def get_employee_json(emp_id):
             # Convert time and date objects to strings for JSON serialization
             def serialize_value(value):
                 if isinstance(value, time):
-                    return value.strftime('%H:%M:%S')
+                    # Format as HH:MM (without seconds) for HTML time input compatibility
+                    return value.strftime('%H:%M')
                 elif isinstance(value, date):
                     return value.isoformat()
                 elif isinstance(value, datetime):
