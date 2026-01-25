@@ -379,24 +379,14 @@ def edit_employee(emp_id):
     else:
         effective_from = date.today()
     
-    # Check if schedule has actually changed before creating a new history record
-    current_schedule = EmployeeSchedule.get_active_schedule(emp_id)
-    schedule_changed = False
-    if not current_schedule:
-        schedule_changed = True
-    else:
-        for key, value in schedule_data.items():
-            if current_schedule.get(key) != value:
-                schedule_changed = True
-                break
-    
-    if schedule_changed:
-        EmployeeSchedule.create_schedule(
-            emp_id,
-            schedule_data,
-            effective_from=effective_from,
-            created_by=session.get('admin_id')
-        )
+    # Create or update schedule
+    # We simplify this to always create/update to ensure data persistence
+    EmployeeSchedule.create_schedule(
+        emp_id,
+        schedule_data,
+        effective_from=effective_from,
+        created_by=session.get('admin_id')
+    )
     
     ActivityLog.log(session['admin_id'], session['admin_name'], 'UPDATE', 'employee', emp_id, f"Updated employee {data['first_name']} {data['last_name']}", request.remote_addr)
     flash('Employee updated successfully', 'success')
