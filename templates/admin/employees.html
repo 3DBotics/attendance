@@ -991,8 +991,19 @@ function editEmployee(id) {
                     const startInput = document.getElementById(`edit_${day}_start_time`);
                     const endInput = document.getElementById(`edit_${day}_end_time`);
                     
-                    if (startInput) startInput.value = startTime ? startTime.substring(0, 5) : '08:00';
-                    if (endInput) endInput.value = endTime ? endTime.substring(0, 5) : '17:00';
+                    let startValue = '08:00';
+                    let endValue = '17:00';
+                    
+                    if (startTime && startTime !== null && startTime !== 'null') {
+                        startValue = String(startTime).substring(0, 5);
+                    }
+                    
+                    if (endTime && endTime !== null && endTime !== 'null') {
+                        endValue = String(endTime).substring(0, 5);
+                    }
+                    
+                    if (startInput) startInput.value = startValue;
+                    if (endInput) endInput.value = endValue;
                 });
             }
             
