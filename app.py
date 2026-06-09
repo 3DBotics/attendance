@@ -312,10 +312,15 @@ def edit_employee(emp_id):
     pin = data.get('pin') if data.get('pin') else None
     start_time = data.get('start_time', '08:00')
     end_time = data.get('end_time', '17:00')
-    
-    id_photo_path = validate_and_save_id_photo(data.get('id_photo'), data['employee_id'])
-    cv_file_path = validate_and_save_cv(request.files.get('cv_file'), data['employee_id'])
-    
+
+    # Only update photo/CV if a new one was actually provided; otherwise preserve existing value
+    new_id_photo = validate_and_save_id_photo(data.get('id_photo'), data['employee_id'])
+    new_cv_file = validate_and_save_cv(request.files.get('cv_file'), data['employee_id'])
+
+    existing = Employee.get_by_id(emp_id)
+    id_photo_path = new_id_photo if new_id_photo is not None else (existing.get('id_photo') if existing else None)
+    cv_file_path = new_cv_file if new_cv_file is not None else (existing.get('cv_file') if existing else None)
+
     Employee.update(
         emp_id,
         data['employee_id'],
@@ -500,7 +505,7 @@ def admin_attendance():
                 JOIN employees e ON a.employee_id = e.id
                 WHERE a.date BETWEEN %s AND %s AND a.employee_id = %s
                 ORDER BY a.date DESC, a.time_in DESC
-            ''', (date_from, date_to, employee_filter))
+            ''', (date_from, date_to, int(employee_filter)))
         else:
             cursor.execute('''
                 SELECT a.*, e.first_name, e.last_name, e.employee_id as emp_code

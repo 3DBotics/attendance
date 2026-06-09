@@ -275,6 +275,45 @@ def init_db():
     if cursor.fetchone()['cnt'] == 0:
         cursor.execute("INSERT INTO branches (name, address) VALUES (%s, %s)", ('Main Branch', 'Default Address'))
     
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS employee_schedules (
+            id SERIAL PRIMARY KEY,
+            employee_id INTEGER NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+            effective_from DATE NOT NULL,
+            effective_to DATE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            created_by INTEGER REFERENCES admins(id),
+            sunday_is_working BOOLEAN DEFAULT false,
+            sunday_start_time TIME,
+            sunday_end_time TIME,
+            monday_is_working BOOLEAN DEFAULT true,
+            monday_start_time TIME DEFAULT '08:00',
+            monday_end_time TIME DEFAULT '17:00',
+            tuesday_is_working BOOLEAN DEFAULT true,
+            tuesday_start_time TIME DEFAULT '08:00',
+            tuesday_end_time TIME DEFAULT '17:00',
+            wednesday_is_working BOOLEAN DEFAULT true,
+            wednesday_start_time TIME DEFAULT '08:00',
+            wednesday_end_time TIME DEFAULT '17:00',
+            thursday_is_working BOOLEAN DEFAULT true,
+            thursday_start_time TIME DEFAULT '08:00',
+            thursday_end_time TIME DEFAULT '17:00',
+            friday_is_working BOOLEAN DEFAULT true,
+            friday_start_time TIME DEFAULT '08:00',
+            friday_end_time TIME DEFAULT '17:00',
+            saturday_is_working BOOLEAN DEFAULT true,
+            saturday_start_time TIME DEFAULT '08:00',
+            saturday_end_time TIME DEFAULT '17:00',
+            CONSTRAINT valid_date_range CHECK (effective_to IS NULL OR effective_from <= effective_to)
+        )
+    ''')
+    try:
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_employee_schedules_employee_id ON employee_schedules(employee_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_employee_schedules_dates ON employee_schedules(effective_from, effective_to)")
+        cursor.execute("ALTER TABLE employee_schedules ADD CONSTRAINT one_current_schedule_per_employee UNIQUE (employee_id, effective_to) DEFERRABLE INITIALLY DEFERRED")
+    except Exception:
+        pass  # Indexes/constraints may already exist
+
     cursor.execute("SELECT COUNT(*) as cnt FROM statutory_deductions")
     if cursor.fetchone()['cnt'] == 0:
         cursor.execute("INSERT INTO statutory_deductions (name, is_percentage, employee_rate, employer_rate) VALUES (%s, %s, %s, %s)", ('SSS', 1, 4.5, 9.5))
@@ -673,7 +712,6 @@ class Attendance:
             
         return summary_list
 
-    @staticmethod
     @staticmethod
     def time_in(employee_id, photo_path, purpose='clock_in', early_start_approved=False, early_start_code=None, is_remote_field=False, remote_field_hours=0):
         conn = get_db()
@@ -1477,23 +1515,24 @@ class PayrollRecord:
                   holiday_pay, tardiness_deduction, undertime_deduction, gross_pay, 0, gross_pay))
             payroll_record_id = cursor.fetchone()['id']
             
-            cursor.execute('''
-                INSERT INTO payroll_deduction_items 
-                (payroll_record_id, deduction_id, deduction_name, employee_amount, employer_amount)
-                VALUES (%s, %s, %s, %s, %s)
-            ''', (payroll_record_id, 1, 'SSS', sss_ee, sss_er))
-            
-            cursor.execute('''
-                INSERT INTO payroll_deduction_items 
-                (payroll_record_id, deduction_id, deduction_name, employee_amount, employer_amount)
-                VALUES (%s, %s, %s, %s, %s)
-            ''', (payroll_record_id, 2, 'PhilHealth', philhealth_ee, philhealth_er))
-            
-            cursor.execute('''
-                INSERT INTO payroll_deduction_items 
-                (payroll_record_id, deduction_id, deduction_name, employee_amount, employer_amount)
-                VALUES (%s, %s, %s, %s, %s)
-            ''', (payroll_record_id, 3, 'Pag-IBIG', pagibig_ee, pagibig_er))
+            # Look up deduction IDs by name to avoid hardcoded ID assumptions
+            deduction_map = {}
+            cursor.execute("SELECT id, name FROM statutory_deductions WHERE name IN ('SSS', 'PhilHealth', 'Pag-IBIG')")
+            for row in cursor.fetchall():
+                deduction_map[row['name']] = row['id']
+
+            for ded_name, ee_amt, er_amt in [
+                ('SSS', sss_ee, sss_er),
+                ('PhilHealth', philhealth_ee, philhealth_er),
+                ('Pag-IBIG', pagibig_ee, pagibig_er),
+            ]:
+                ded_id = deduction_map.get(ded_name)
+                if ded_id is not None:
+                    cursor.execute('''
+                        INSERT INTO payroll_deduction_items 
+                        (payroll_record_id, deduction_id, deduction_name, employee_amount, employer_amount)
+                        VALUES (%s, %s, %s, %s, %s)
+                    ''', (payroll_record_id, ded_id, ded_name, ee_amt, er_amt))
             
             net_pay = gross_pay - total_deductions
             cursor.execute('''
@@ -1583,27 +1622,22 @@ class Admin:
     
     @staticmethod
     def verify_password(username, password):
+        import logging
+        logger = logging.getLogger(__name__)
         try:
             admin = Admin.get_by_username(username)
             if admin:
-                print(f"[DEBUG] Admin found: {username}")
-                print(f"[DEBUG] Password hash exists: {bool(admin.get('password_hash'))}")
                 if admin.get('password_hash'):
                     try:
                         result = check_password_hash(admin['password_hash'], password)
-                        print(f"[DEBUG] Password check result: {result}")
                         if result:
                             return admin
                     except Exception as e:
-                        print(f"[ERROR] Password verification failed: {str(e)}")
-                        import traceback
-                        traceback.print_exc()
+                        logger.error(f"Password verification failed for user '{username}': {type(e).__name__}")
             else:
-                print(f"[DEBUG] Admin not found: {username}")
+                logger.warning(f"Login attempt for unknown username")
         except Exception as e:
-            print(f"[ERROR] verify_password exception: {str(e)}")
-            import traceback
-            traceback.print_exc()
+            logger.error(f"verify_password exception: {type(e).__name__}")
         return None
     
     @staticmethod
@@ -1631,11 +1665,9 @@ class Admin:
             conn.close()
             return result['id'], None
         except psycopg2.IntegrityError as e:
-            import traceback
+            import logging
             error_msg = str(e)
-            print(f"IntegrityError in Admin.create: {error_msg}")
-            print(f"Username attempted: {username}, Role: {role}")
-            print(traceback.format_exc())
+            logging.getLogger(__name__).warning(f"IntegrityError in Admin.create: {type(e).__name__}")
             conn.rollback()
             conn.close()
             if 'username' in error_msg.lower() or 'admins_username_key' in error_msg:
@@ -1645,9 +1677,8 @@ class Admin:
             else:
                 return None, "Database constraint violation"
         except Exception as e:
-            import traceback
-            print(f"Unexpected error in Admin.create: {str(e)}")
-            print(traceback.format_exc())
+            import logging
+            logging.getLogger(__name__).error(f"Unexpected error in Admin.create: {type(e).__name__}")
             conn.rollback()
             conn.close()
             return None, "An unexpected error occurred"
@@ -1694,6 +1725,7 @@ class DatabaseManager:
         cursor.execute('DELETE FROM payroll_records')
         cursor.execute('DELETE FROM payroll_periods')
         cursor.execute('DELETE FROM attendance')
+        cursor.execute('DELETE FROM employee_schedules')
         cursor.execute('DELETE FROM employees')
         cursor.execute('DELETE FROM branches')
         cursor.execute('DELETE FROM activity_logs')
@@ -1806,15 +1838,14 @@ class EmployeeSchedule:
         except Exception as e:
             conn.rollback()
             conn.close()
-            print(f"Error creating schedule: {e}")
+            import logging
+            logging.getLogger(__name__).error(f"Error creating schedule: {e}")
             return None
     
-        return schedule
-    
     @staticmethod
-    def get_active_schedule(employee_id):
+    def get_active_schedule(employee_id, target_date=None):
         """
-        Get the currently active schedule for an employee (as of today)
+        Get the currently active schedule for an employee (as of today or a given date)
         
         Args:
             employee_id: ID of the employee
@@ -1823,8 +1854,8 @@ class EmployeeSchedule:
             Dict of schedule data or None
         """
         from datetime import date
-        today = date.today()
-        return EmployeeSchedule.get_active_schedule_for_date(employee_id, today)
+        effective_date = target_date if target_date is not None else date.today()
+        return EmployeeSchedule.get_active_schedule_for_date(employee_id, effective_date)
     
     @staticmethod
     def get_active_schedule_for_date(employee_id, target_date):

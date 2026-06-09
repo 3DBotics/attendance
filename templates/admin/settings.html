@@ -26,9 +26,11 @@
     <div class="bg-white rounded-xl shadow p-6">
         <div class="flex justify-between items-center mb-4">
             <h2 class="text-xl font-bold text-teal-800">Statutory Deductions</h2>
+            {% if session.get('admin_role') == 'master_admin' %}
             <button onclick="document.getElementById('addDeductionModal').classList.remove('hidden')" class="text-teal-600 hover:text-teal-800">
                 <i class="fas fa-plus"></i> Add
             </button>
+            {% endif %}
         </div>
         <div class="space-y-3">
             {% for ded in deductions %}
@@ -70,9 +72,11 @@
     <div class="bg-white rounded-xl shadow p-6 lg:col-span-2">
         <div class="flex justify-between items-center mb-4">
             <h2 class="text-xl font-bold text-teal-800">Holidays</h2>
+            {% if session.get('admin_role') == 'master_admin' %}
             <button onclick="document.getElementById('addHolidayModal').classList.remove('hidden')" class="text-teal-600 hover:text-teal-800">
                 <i class="fas fa-plus"></i> Add Holiday
             </button>
+            {% endif %}
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {% for holiday in holidays %}
@@ -104,7 +108,7 @@
     
     <div class="bg-white border border-red-300 rounded-lg p-4">
         <h3 class="font-bold text-red-800 mb-2">Reset All Data</h3>
-        <p class="text-sm text-gray-600 mb-4">This will permanently delete all employees, attendance records, payroll data, and activity logs. Branches, deductions, holidays, and admin accounts will be preserved.</p>
+        <p class="text-sm text-gray-600 mb-4">This will permanently delete all employees, employee schedules, attendance records, payroll data, branches, and activity logs. Statutory deductions, holidays, and admin accounts will be preserved.</p>
         <button onclick="document.getElementById('resetDatabaseModal').classList.remove('hidden')" 
                 class="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700">
             <i class="fas fa-database mr-2"></i>Reset Database

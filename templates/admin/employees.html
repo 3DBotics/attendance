@@ -5,9 +5,11 @@
 {% block admin_content %}
 <div class="flex justify-between items-center mb-8">
     <h1 class="text-3xl font-bold text-teal-800">Employees</h1>
+    {% if session.get('admin_role') in ['master_admin', 'staff'] %}
     <button onclick="document.getElementById('addEmployeeModal').classList.remove('hidden')" class="bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700">
         <i class="fas fa-plus mr-2"></i>Add Employee
     </button>
+    {% endif %}
 </div>
 
 <div class="bg-white rounded-xl shadow overflow-hidden">
@@ -56,9 +58,11 @@
                     <button onclick="viewEmployee({{ emp.id }})" class="text-blue-600 hover:text-blue-800" title="View Details">
                         <i class="fas fa-eye"></i>
                     </button>
+                    {% if session.get('admin_role') in ['master_admin', 'staff'] %}
                     <button onclick="editEmployee({{ emp.id }})" class="text-teal-600 hover:text-teal-800" title="Edit">
                         <i class="fas fa-edit"></i>
                     </button>
+                    {% endif %}
                     {% set current_status = emp.status or ('resigned' if emp.is_resigned else 'active') %}
                     {% if current_status == 'active' and can_edit_delete %}
                     <button onclick="openStatusChange({{ emp.id }}, '{{ emp.first_name }} {{ emp.last_name }}')" class="text-coral-300 hover:text-coral-500" title="Change Status">
