@@ -1,0 +1,12 @@
+# Exclude development and migration artifacts
+payroll.db
+*.db
+uv.lock
+__pycache__/
+*.pyc
+*.pyo
+.git/
+attached_assets/
+repair_database.py
+replit.md
+static/uploads/

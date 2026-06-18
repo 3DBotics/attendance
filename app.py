@@ -14,7 +14,15 @@ import pytz
 from supabase import create_client, Client
 
 app = Flask(__name__)
-app.secret_key = os.environ.get('SESSION_SECRET', 'dev-secret-key')
+app.secret_key = os.environ.get('SESSION_SECRET', 'dev-secret-key-change-in-production')
+
+# Session configuration — use cookie-based sessions (no filesystem required)
+# This is compatible with Vercel's serverless/stateless environment
+app.config['SESSION_TYPE'] = 'cookie'
+app.config['SESSION_COOKIE_SECURE'] = os.environ.get('APP_ENV') == 'production'
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['PERMANENT_SESSION_LIFETIME'] = 28800  # 8 hours
 
 SUPABASE_URL = os.environ.get('SUPABASE_URL', '')
 SUPABASE_KEY = os.environ.get('SUPABASE_KEY', '')
@@ -1039,27 +1047,22 @@ def record_attendance():
                 
                 # Get public URL
                 photo_path = supabase_client.storage.from_('attendance-photos').get_public_url(filename)
-                print(f"Photo uploaded to Supabase Storage: {photo_path}")
             except Exception as e:
-                import traceback
-                print(f"Supabase Storage upload failed: {e}")
-                print(traceback.format_exc())
+                import logging
+                logging.getLogger(__name__).error(f"Supabase Storage upload failed: {type(e).__name__}")
                 # Fallback to local storage
                 filepath = os.path.join(UPLOAD_FOLDER, filename)
                 output.seek(0)
                 with open(filepath, 'wb') as f:
                     f.write(output.read())
                 photo_path = f"static/uploads/{filename}"
-                print(f"Fallback: Photo saved locally to {photo_path}")
         else:
             # No Supabase client, use local storage
-            print("Supabase client not initialized, saving locally")
             filepath = os.path.join(UPLOAD_FOLDER, filename)
             output.seek(0)
             with open(filepath, 'wb') as f:
                 f.write(output.read())
             photo_path = f"static/uploads/{filename}"
-            print(f"Photo saved locally to {photo_path}")
     else:
         photo_path = None
     

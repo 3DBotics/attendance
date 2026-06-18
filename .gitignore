@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Local database (SQLite leftover from dev)
+*.db
+*.sqlite3
+
+# Environment secrets
+.env
+.env.*
+
+# Uploaded files (stored in Supabase Storage in production)
+static/uploads/*.jpg
+static/uploads/*.jpeg
+static/uploads/*.png
+static/uploads/id_photos/
+static/uploads/cv_files/
+
+# Vercel
+.vercel/
