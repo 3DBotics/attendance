@@ -21,6 +21,17 @@ def get_db():
         )
     try:
         conn = psycopg2.connect(database_url)
+        # Optional: keep PayStation tables in their own schema (e.g. "paystation")
+        # when sharing a Postgres database with another app. Needs a session-mode
+        # connection (Supabase session pooler, port 5432).
+        db_schema = os.environ.get('DB_SCHEMA')
+        if db_schema:
+            if not db_schema.replace('_', '').isalnum():
+                raise RuntimeError("DB_SCHEMA contains invalid characters.")
+            cur = conn.cursor()
+            cur.execute('SET search_path TO "%s"' % db_schema)
+            conn.commit()
+            cur.close()
         return conn
     except psycopg2.OperationalError as e:
         error_msg = str(e)
@@ -261,8 +272,11 @@ def init_db():
     cursor.execute("SELECT COUNT(*) as cnt FROM admins")
     if cursor.fetchone()['cnt'] == 0:
         from werkzeug.security import generate_password_hash
-        cursor.execute("INSERT INTO admins (username, password_hash, full_name, role) VALUES (%s, %s, %s, %s)", 
-                      ('admin', generate_password_hash('admin123'), 'Master Administrator', 'master_admin'))
+        initial_password = os.environ.get('ADMIN_INITIAL_PASSWORD')
+        if not initial_password:
+            raise RuntimeError("ADMIN_INITIAL_PASSWORD environment variable must be set to create the first admin.")
+        cursor.execute("INSERT INTO admins (username, password_hash, full_name, role) VALUES (%s, %s, %s, %s)",
+                      ('admin', generate_password_hash(initial_password), 'Master Administrator', 'master_admin'))
     
     cursor.execute("SELECT COUNT(*) as cnt FROM settings WHERE key = 'grace_period'")
     if cursor.fetchone()['cnt'] == 0:
