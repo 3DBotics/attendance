@@ -73,7 +73,13 @@ def fix_photo_url_filter(photo_path):
     return photo_path
 
 UPLOAD_FOLDER = 'static/uploads'
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+try:
+    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+except OSError:
+    # Serverless hosts such as Vercel have a read-only app directory;
+    # only /tmp is writable there.
+    UPLOAD_FOLDER = '/tmp/uploads'
+    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 init_db()
 
@@ -187,7 +193,10 @@ def validate_and_save_id_photo(photo_data, employee_id):
         import secrets
         filename = f"id_{safe_emp_id}_{secrets.token_hex(8)}.jpg"
         photo_path = f"static/uploads/id_photos/{filename}"
-        os.makedirs('static/uploads/id_photos', exist_ok=True)
+        try:
+            os.makedirs('static/uploads/id_photos', exist_ok=True)
+        except OSError:
+            pass  # read-only filesystem (Vercel); the photo is returned as base64 below
         
         img = Image.open(BytesIO(img_bytes))
         img = img.convert('RGB')
