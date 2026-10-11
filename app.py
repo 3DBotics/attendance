@@ -731,7 +731,7 @@ def add_deduction():
 def edit_deduction(ded_id):
     data = request.form
     is_percentage = 1 if data.get('is_percentage') else 0
-    is_active = 1 if data.get('is_active') else 0
+    is_active = bool(data.get('is_active'))
     StatutoryDeduction.update(
         ded_id,
         data['name'],
@@ -851,7 +851,7 @@ def add_admin():
 @master_admin_required
 def update_admin(admin_id):
     data = request.form
-    is_active = 1 if data.get('is_active') else 0
+    is_active = bool(data.get('is_active'))
     Admin.update(admin_id, data['full_name'], data['role'], is_active)
     if data.get('new_password'):
         Admin.update_password(admin_id, data['new_password'])
@@ -904,7 +904,7 @@ def add_auth_code():
 @master_admin_required
 def edit_auth_code(code_id):
     data = request.form
-    is_active = 1 if data.get('is_active') else 0
+    is_active = bool(data.get('is_active'))
     uses_remaining = int(data.get('uses_remaining', -1))
     valid_until = data.get('valid_until') or None
     allowable_hours = float(data.get('allowable_hours', 0))

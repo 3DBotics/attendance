@@ -75,8 +75,8 @@ def init_db():
             end_time TEXT DEFAULT '17:00',
             pin_hash TEXT NOT NULL,
             photo_path TEXT,
-            is_active INTEGER DEFAULT 1,
-            is_resigned INTEGER DEFAULT 0,
+            is_active BOOLEAN DEFAULT TRUE,
+            is_resigned BOOLEAN DEFAULT FALSE,
             resigned_date DATE,
             status TEXT DEFAULT 'active',
             status_reason TEXT,
@@ -118,15 +118,15 @@ def init_db():
             time_out_photo TEXT,
             time_in_purpose TEXT DEFAULT 'clock_in',
             time_out_purpose TEXT,
-            is_holiday INTEGER DEFAULT 0,
+            is_holiday BOOLEAN DEFAULT FALSE,
             holiday_type TEXT,
             is_overtime_approved INTEGER DEFAULT 0,
             overtime_hours REAL DEFAULT 0,
             tardiness_minutes INTEGER DEFAULT 0,
             undertime_minutes INTEGER DEFAULT 0,
-            early_start_approved INTEGER DEFAULT 0,
+            early_start_approved BOOLEAN DEFAULT FALSE,
             early_start_minutes INTEGER DEFAULT 0,
-            official_overtime_approved INTEGER DEFAULT 0,
+            official_overtime_approved BOOLEAN DEFAULT FALSE,
             official_overtime_minutes INTEGER DEFAULT 0,
             requires_admin_review INTEGER DEFAULT 0,
             admin_review_reason TEXT,
@@ -170,7 +170,7 @@ def init_db():
             is_percentage INTEGER DEFAULT 0,
             employee_rate REAL DEFAULT 0,
             employer_rate REAL DEFAULT 0,
-            is_active INTEGER DEFAULT 1,
+            is_active BOOLEAN DEFAULT TRUE,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
@@ -233,7 +233,7 @@ def init_db():
             password_hash TEXT NOT NULL,
             full_name TEXT NOT NULL,
             role TEXT DEFAULT 'sub_admin',
-            is_active INTEGER DEFAULT 1,
+            is_active BOOLEAN DEFAULT TRUE,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
@@ -260,7 +260,7 @@ def init_db():
             code_type TEXT NOT NULL CHECK(code_type IN ('early_start', 'overtime', 'remote_field')),
             allowable_hours REAL DEFAULT 0,
             description TEXT,
-            is_active INTEGER DEFAULT 1,
+            is_active BOOLEAN DEFAULT TRUE,
             uses_remaining INTEGER DEFAULT -1,
             valid_until DATE,
             created_by INTEGER,

@@ -53,7 +53,7 @@
                     </div>
                     <div class="flex space-x-2">
                         {% if session.get('admin_role') == 'master_admin' %}
-                        <button onclick="editDeduction({{ ded.id }}, '{{ ded.name }}', {{ ded.is_percentage }}, {{ ded.employee_rate }}, {{ ded.employer_rate }}, {{ ded.is_active }})" class="text-teal-600 hover:text-teal-800">
+                        <button onclick="editDeduction({{ ded.id }}, '{{ ded.name }}', {{ ded.is_percentage }}, {{ ded.employee_rate }}, {{ ded.employer_rate }}, {{ 1 if ded.is_active else 0 }})" class="text-teal-600 hover:text-teal-800">
                             <i class="fas fa-edit"></i>
                         </button>
                         <button onclick="confirmDeleteDeduction({{ ded.id }}, '{{ ded.name }}')" class="text-red-600 hover:text-red-800">
